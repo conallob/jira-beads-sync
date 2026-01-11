@@ -1,11 +1,12 @@
 version: 2
 
+# Note: Generated protobuf files (gen/**/*.pb.go) should be committed to the repository.
+# Do not regenerate them during the release process to avoid version-dependent diffs.
+# To regenerate protobuf files during development, run:
+#   protoc --go_out=. --go_opt=module=github.com/conallob/jira-beads-sync --proto_path=proto proto/jira.proto proto/beads.proto
+
 before:
   hooks:
-    # Install protoc-gen-go
-    - go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-    # Generate protobuf files
-    - protoc --go_out=. --go_opt=module=github.com/conallob/jira-beads-sync --proto_path=proto proto/jira.proto proto/beads.proto
     # Run tests
     - go test ./...
     # Tidy dependencies
