@@ -1,6 +1,7 @@
 package beads
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -47,12 +48,18 @@ func (r *YAMLRenderer) RenderExport(export *pb.Export) error {
 
 // RenderIssue renders a single issue to YAML
 func (r *YAMLRenderer) RenderIssue(issue *pb.Issue) error {
+	if err := r.ensureDirectories(); err != nil {
+		return fmt.Errorf("failed to create directories: %w", err)
+	}
 	filename := filepath.Join(r.outputDir, ".beads", "issues", fmt.Sprintf("%s.yaml", issue.Id))
 	return r.renderToYAML(filename, issue)
 }
 
 // RenderEpic renders a single epic to YAML
 func (r *YAMLRenderer) RenderEpic(epic *pb.Epic) error {
+	if err := r.ensureDirectories(); err != nil {
+		return fmt.Errorf("failed to create directories: %w", err)
+	}
 	filename := filepath.Join(r.outputDir, ".beads", "epics", fmt.Sprintf("%s.yaml", epic.Id))
 	return r.renderToYAML(filename, epic)
 }
@@ -289,8 +296,8 @@ func (r *YAMLRenderer) yamlToJSON(yamlData map[string]interface{}) ([]byte, erro
 	// Convert YAML format back to protobuf JSON format
 	jsonData := r.convertFromYAMLFormat(yamlData)
 
-	// Marshal to JSON bytes
-	return yaml.Marshal(jsonData)
+	// Marshal to JSON bytes (not YAML!)
+	return json.Marshal(jsonData)
 }
 
 // convertFromYAMLFormat converts YAML format back to protobuf JSON format
@@ -313,6 +320,9 @@ func (r *YAMLRenderer) convertFromYAMLFormat(data map[string]interface{}) map[st
 				result[protoKey] = r.statusFromYAML(v)
 			case "priority":
 				result[protoKey] = r.priorityFromYAML(v)
+			case "created", "updated":
+				// Timestamp fields - keep as RFC3339 string, protojson will handle it
+				result[protoKey] = v
 			default:
 				result[protoKey] = v
 			}
