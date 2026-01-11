@@ -243,6 +243,8 @@ func (r *YAMLRenderer) toYAMLKey(key string) string {
 		return "jiraId"
 	case "jira_issue_type":
 		return "jiraIssueType"
+	case "repositories":
+		return "repositories"
 	default:
 		return key
 	}
@@ -333,6 +335,8 @@ func (r *YAMLRenderer) toProtoKey(key string) string {
 		return "jira_id"
 	case "jiraIssueType":
 		return "jira_issue_type"
+	case "repositories":
+		return "repositories"
 	default:
 		return key
 	}
@@ -370,4 +374,43 @@ func (r *YAMLRenderer) priorityFromYAML(priority string) string {
 	default:
 		return "PRIORITY_P2"
 	}
+}
+
+// AddRepositoryAnnotation adds a repository to an issue's metadata
+func (r *YAMLRenderer) AddRepositoryAnnotation(issueID, repository string) error {
+	// Construct issue file path
+	filename := filepath.Join(r.outputDir, ".beads", "issues", fmt.Sprintf("%s.yaml", issueID))
+
+	// Check if file exists
+	if _, err := os.Stat(filename); os.IsNotExist(err) {
+		return fmt.Errorf("issue file not found: %s", filename)
+	}
+
+	// Parse existing issue
+	issue, err := r.ParseIssueFile(filename)
+	if err != nil {
+		return fmt.Errorf("failed to parse issue: %w", err)
+	}
+
+	// Initialize metadata if needed
+	if issue.Metadata == nil {
+		issue.Metadata = &pb.Metadata{}
+	}
+
+	// Check if repository already exists
+	for _, repo := range issue.Metadata.Repositories {
+		if repo == repository {
+			return fmt.Errorf("repository '%s' is already associated with issue %s", repository, issueID)
+		}
+	}
+
+	// Add repository
+	issue.Metadata.Repositories = append(issue.Metadata.Repositories, repository)
+
+	// Render updated issue back to file
+	if err := r.RenderIssue(issue); err != nil {
+		return fmt.Errorf("failed to save updated issue: %w", err)
+	}
+
+	return nil
 }
