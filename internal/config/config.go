@@ -20,12 +20,15 @@ type JiraConfig struct {
 	APIToken string `yaml:"api_token"`
 }
 
+// configPathFunc is a variable that can be overridden in tests
+var configPathFunc = getConfigPath
+
 // Load loads configuration from a file or environment variables
 func Load() (*Config, error) {
 	config := &Config{}
 
 	// Try to load from config file first
-	configPath := getConfigPath()
+	configPath := configPathFunc()
 	if _, err := os.Stat(configPath); err == nil {
 		if err := loadFromFile(configPath, config); err != nil {
 			return nil, fmt.Errorf("failed to load config file: %w", err)
@@ -62,7 +65,7 @@ func (c *Config) Validate() error {
 
 // Save saves the configuration to a file
 func (c *Config) Save() error {
-	configPath := getConfigPath()
+	configPath := configPathFunc()
 
 	// Create config directory if it doesn't exist
 	configDir := filepath.Dir(configPath)
