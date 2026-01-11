@@ -48,6 +48,33 @@ archives:
       - README.md
       - CLAUDE.md
 
+nfpms:
+  - id: packages
+    package_name: jira-beads-sync
+    vendor: Conall O'Brien
+    homepage: https://github.com/conallob/jira-beads-sync
+    maintainer: Conall O'Brien <conall@conall.net>
+    description: Sync Jira task trees with beads issues (bidirectional)
+    license: BSD-3-Clause
+    formats:
+      - deb
+      - rpm
+    bindir: /usr/bin
+    contents:
+      - src: LICENSE
+        dst: /usr/share/doc/jira-beads-sync/LICENSE
+      - src: README.md
+        dst: /usr/share/doc/jira-beads-sync/README.md
+      - src: CLAUDE.md
+        dst: /usr/share/doc/jira-beads-sync/CLAUDE.md
+    rpm:
+      group: Development/Tools
+      compression: lzma
+    deb:
+      lintian_overrides:
+        - statically-linked-binary
+        - changelog-file-missing-in-native-package
+
 checksum:
   name_template: 'checksums.txt'
 
@@ -84,13 +111,34 @@ release:
   header: |
     ## What's Changed
 
-    Jira to Beads Converter - Convert Jira task trees to beads issues.
+    Jira Beads Sync - Bidirectional synchronization between Jira task trees and beads issues.
 
     ### Installation
 
-    Download the appropriate binary for your system from the assets below.
+    **Homebrew (macOS/Linux):**
+    ```bash
+    brew install conallob/tap/jira-beads-sync
+    ```
 
-    **macOS:**
+    **Debian/Ubuntu:**
+    ```bash
+    curl -LO https://github.com/conallob/jira-beads-sync/releases/download/{{ .Tag }}/jira-beads-sync_{{ .Version }}_amd64.deb
+    sudo dpkg -i jira-beads-sync_{{ .Version }}_amd64.deb
+    ```
+
+    **RHEL/Fedora/CentOS:**
+    ```bash
+    curl -LO https://github.com/conallob/jira-beads-sync/releases/download/{{ .Tag }}/jira-beads-sync_{{ .Version }}_x86_64.rpm
+    sudo rpm -i jira-beads-sync_{{ .Version }}_x86_64.rpm
+    ```
+
+    **Container:**
+    ```bash
+    docker pull ghcr.io/conallob/jira-beads-sync:{{ .Version }}
+    docker run ghcr.io/conallob/jira-beads-sync:{{ .Version }} help
+    ```
+
+    **Manual (macOS):**
     ```bash
     # For Apple Silicon (M1/M2/M3)
     curl -LO https://github.com/conallob/jira-beads-sync/releases/download/{{ .Tag }}/jira-beads-sync_{{ .Version }}_Darwin_arm64.tar.gz
@@ -103,7 +151,7 @@ release:
     sudo mv jira-beads-sync /usr/local/bin/
     ```
 
-    **Linux:**
+    **Manual (Linux):**
     ```bash
     # For x86_64
     curl -LO https://github.com/conallob/jira-beads-sync/releases/download/{{ .Tag }}/jira-beads-sync_{{ .Version }}_Linux_x86_64.tar.gz
@@ -133,8 +181,8 @@ brews:
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     directory: Formula
     homepage: "https://github.com/conallob/jira-beads-sync"
-    description: "Convert Jira task trees to beads issues"
-    license: "Apache-2.0"
+    description: "Sync Jira task trees with beads issues (bidirectional)"
+    license: "BSD-3-Clause"
     install: |
       bin.install "jira-beads-sync"
     test: |

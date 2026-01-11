@@ -4,11 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Go-based CLI tool to convert Jira task trees into beads issues. It handles the hierarchical structure of Jira tasks (epics, stories, subtasks) and maps them to the beads issue tracking system while preserving dependencies and relationships.
+This is a Go-based CLI tool to sync Jira task trees with beads issues. It handles the hierarchical structure of Jira tasks (epics, stories, subtasks) and provides bidirectional synchronization with the beads issue tracking system while preserving dependencies and relationships.
 
-The tool supports two modes:
-1. **Quickstart mode**: Fetch issues directly from Jira API and convert them
-2. **Convert mode**: Convert previously exported Jira JSON files
+The tool supports multiple modes:
+1. **Quickstart mode**: Fetch issues directly from Jira API and sync them to beads
+2. **Sync mode**: Sync beads state changes back to Jira (bidirectional)
+3. **Convert mode**: One-way conversion of previously exported Jira JSON files
 
 ## Language & Tooling
 
@@ -131,21 +132,32 @@ When implementing new features:
 ### Quickstart Mode (Recommended)
 Users will:
 1. Configure Jira credentials once: `jira-beads-sync configure`
-2. Fetch and convert issues: `jira-beads-sync quickstart PROJ-123`
-3. The tool will recursively fetch all dependencies and convert to beads format
+2. Fetch and sync issues: `jira-beads-sync quickstart PROJ-123`
+3. The tool will recursively fetch all dependencies and sync to beads format
 4. Validate that hierarchy and dependencies are correct
+5. Work in beads, then sync changes back to Jira: `jira-beads-sync sync`
 
-### Convert Mode
+### Sync Mode (Bidirectional)
+Users will:
+1. Import issues from Jira using quickstart mode
+2. Make changes in beads (update status, assignee, etc.)
+3. Run sync to push changes back to Jira: `jira-beads-sync sync`
+4. The tool will detect changes and update Jira via API
+5. Maintain consistency between beads and Jira
+
+### Convert Mode (One-Way Only)
 Users will:
 1. Export Jira tasks to JSON file
 2. Run this tool to convert the Jira data structure
 3. Import the converted issues into beads system
 4. Validate that hierarchy and dependencies are correct
+Note: Convert mode does not support syncing back to Jira
 
 ## Jira API Integration
 
-The tool uses Jira REST API v2 for fetching issues:
+The tool uses Jira REST API v2 for bidirectional synchronization:
 
+### Fetching from Jira (Jira → Beads)
 - **Authentication**: Basic Auth with username and API token
 - **Configuration**: Supports config file, environment variables, or interactive setup
 - **Recursive Fetching**: Walks dependency graph including:
@@ -154,17 +166,24 @@ The tool uses Jira REST API v2 for fetching issues:
   - Parent issues (via `fields.parent`, excluding epics)
 - **Duplicate Prevention**: Uses visited map to avoid infinite loops
 
+### Syncing to Jira (Beads → Jira)
+- **Change Detection**: Compares beads state with cached Jira state
+- **Field Updates**: Updates status, assignee, priority, description
+- **API Operations**: Uses PUT/POST endpoints to update Jira issues
+- **Conflict Resolution**: Handles concurrent modifications gracefully
+
 Key files:
-- `internal/jira/client.go`: Jira API client with recursive dependency walking
+- `internal/jira/client.go`: Jira API client with recursive dependency walking and update operations
 - `internal/config/config.go`: Configuration management
 
 ## Claude Code Plugin
 
-This repository includes a Claude Code plugin that enables importing Jira issues through natural language commands or slash commands.
+This repository includes a Claude Code plugin that enables syncing Jira issues through natural language commands or slash commands.
 
 ### Plugin Commands
 
 - `/import-jira <jira-url-or-key>` - Import a Jira issue and its dependency tree
+- `/sync-jira` - Sync beads changes back to Jira
 - `/configure-jira` - Configure Jira API credentials
 - `/convert-jira-export <file>` - Convert a Jira export JSON file
 
@@ -173,6 +192,7 @@ This repository includes a Claude Code plugin that enables importing Jira issues
 Claude can understand requests like:
 - "Import PROJ-123 from Jira"
 - "Fetch the Jira issue TEAM-456 and all its dependencies"
+- "Sync beads changes back to Jira"
 - "Configure my Jira credentials"
 - "Convert jira-export.json to beads format"
 
@@ -183,10 +203,11 @@ Add to your project's `.claude/CLAUDE.md`:
 ```markdown
 # Jira Integration
 
-When working on Jira issues, import them into beads:
+When working on Jira issues, sync them with beads:
 - Import: Ask Claude to "import <jira-key> from Jira"
 - View: Use `bd list` and `bd show <id>` to see imported issues
-- The tool automatically fetches all dependencies and related issues
+- Sync back: Ask Claude to "sync beads changes to Jira"
+- The tool automatically fetches all dependencies and maintains bidirectional sync
 ```
 
 ### Plugin Installation

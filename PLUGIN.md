@@ -1,6 +1,6 @@
 # jira-beads-sync Claude Code Plugin
 
-This directory contains a Claude Code plugin that enables Claude to import Jira issues directly into beads issue tracker through natural language commands.
+This directory contains a Claude Code plugin that enables Claude to sync Jira issues with beads issue tracker through natural language commands. Supports bidirectional synchronization: import from Jira and push changes back to Jira.
 
 ## Installation
 
@@ -35,7 +35,7 @@ claude plugin install jira-beads-sync@your-marketplace
 
 ## Available Commands
 
-The plugin provides three slash commands for Claude Code:
+The plugin provides four slash commands for Claude Code:
 
 ### `/import-jira <jira-url-or-key>`
 
@@ -70,9 +70,26 @@ Set up my Jira API token
 Help me connect to Jira
 ```
 
+### `/sync-jira [issue-keys...]`
+
+Sync beads state changes back to Jira (bidirectional sync).
+
+**Examples:**
+```
+/sync-jira
+/sync-jira PROJ-123 PROJ-456
+```
+
+**Natural Language:**
+```
+Sync beads changes back to Jira
+Push my beads updates to Jira
+Update Jira with beads status changes
+```
+
 ### `/convert-jira-export <file>`
 
-Convert a Jira export JSON file to beads format.
+Convert a Jira export JSON file to beads format (one-way conversion).
 
 **Examples:**
 ```

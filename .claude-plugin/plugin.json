@@ -1,19 +1,21 @@
 {
   "name": "jira-beads-sync",
-  "description": "A helper tool to sync a tree of Jira tasks into beads tasks, and sync beads state back to Jira.",
+  "description": "Sync Jira task trees with beads issue tracker. Bidirectional synchronization: import from Jira API and sync beads state back to Jira.",
   "version": "0.1.0",
   "author": {
     "name": "Conall O'Brien",
     "url": "https://github.com/conallob"
   },
   "repository": "https://github.com/conallob/jira-beads-sync",
-  "license": "Apache-2.0",
+  "license": "BSD-3-Clause",
   "homepage": "https://github.com/conallob/jira-beads-sync",
   "keywords": [
     "jira",
     "beads",
     "issue-tracker",
     "task-management",
+    "synchronization",
+    "bidirectional-sync",
     "import",
     "conversion",
     "sync"

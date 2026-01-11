@@ -138,11 +138,59 @@ This project uses GitHub Actions for CI/CD:
   - Runs linter and formatting checks
   - Verifies protobuf files are up to date
 
-- **Release workflow** (`release.yml`): Runs on version tags
-  - Builds binaries for all platforms
-  - Creates GitHub releases
-  - Publishes Docker images
-  - Updates Homebrew formula
+- **Release workflow** (`release.yml`): Runs on version tags (e.g., `v1.0.0`)
+  - Builds binaries for all platforms (Linux, macOS, Windows)
+  - Creates RPM packages (RHEL, Fedora, CentOS)
+  - Creates DEB packages (Debian, Ubuntu)
+  - Publishes multi-arch Docker images to GitHub Container Registry
+  - Updates Homebrew formula in `conallob/homebrew-tap`
+  - Creates GitHub releases with comprehensive installation instructions
+
+### Release Process
+
+To create a new release:
+
+1. **Tag a new version:**
+   ```bash
+   git tag -a v1.0.0 -m "Release v1.0.0"
+   git push origin v1.0.0
+   ```
+
+2. **GitHub Actions will automatically:**
+   - Run all tests
+   - Build binaries for all platforms
+   - Create RPM and DEB packages
+   - Build and push Docker images to `ghcr.io/conallob/jira-beads-sync`
+   - Update Homebrew formula
+   - Create a GitHub release with installation instructions
+
+### Required GitHub Secrets
+
+For the release workflow to function properly, configure these secrets in your repository settings:
+
+- **`GITHUB_TOKEN`**: Automatically provided by GitHub Actions (no configuration needed)
+  - Used for: Creating releases, publishing to GitHub Container Registry (GHCR)
+  - Permissions: `contents: write`, `packages: write` (configured in workflow)
+
+- **`HOMEBREW_TAP_GITHUB_TOKEN`**: Personal Access Token (PAT) for Homebrew tap repository
+  - Required: Yes (must be configured manually)
+  - Used for: Pushing formula updates to `conallob/homebrew-tap`
+  - Required permissions: `repo` (full control of private repositories)
+  - Setup:
+    1. Go to GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)
+    2. Generate new token with `repo` scope
+    3. Add as repository secret named `HOMEBREW_TAP_GITHUB_TOKEN`
+
+### Release Artifacts
+
+Each release produces:
+- **Binaries**: tar.gz/zip archives for Linux, macOS (Intel/ARM), Windows
+- **Linux Packages**:
+  - `.deb` files for Debian/Ubuntu (amd64, arm64)
+  - `.rpm` files for RHEL/Fedora/CentOS (x86_64, aarch64)
+- **Container Images**: Multi-arch Docker images on GHCR
+- **Homebrew Formula**: Auto-updated in `conallob/homebrew-tap`
+- **Checksums**: `checksums.txt` for verifying downloads
 
 ## Reporting Issues
 
@@ -161,4 +209,4 @@ Feel free to open an issue for questions or discussions about the project.
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the same license as the project (Apache 2.0).
+By contributing, you agree that your contributions will be licensed under the same license as the project (BSD-3-Clause).

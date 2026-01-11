@@ -5,16 +5,18 @@
 [![License](https://img.shields.io/github/license/conallob/jira-beads-sync)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/conallob/jira-beads-sync)](https://github.com/conallob/jira-beads-sync/releases/latest)
 
-A Go-based CLI tool to convert Jira task trees into beads issues. This tool handles the hierarchical structure of Jira tasks (epics, stories, subtasks) and maps them to the beads issue tracking system while preserving dependencies and relationships.
+A Go-based CLI tool to sync Jira task trees with beads issues. This tool handles the hierarchical structure of Jira tasks (epics, stories, subtasks) and provides bidirectional synchronization between Jira and the beads issue tracking system while preserving dependencies and relationships.
 
 ## Features
 
-- **Claude Code Plugin**: Import Jira issues through natural language with Claude Code
+- **Bidirectional Synchronization**: Sync Jira tasks to beads and sync beads state back to Jira
+- **Claude Code Plugin**: Import and sync Jira issues through natural language with Claude Code
 - **Quickstart Mode**: Fetch issues directly from Jira with a single command
-- **Dependency Graph Walking**: Automatically fetch and convert entire task hierarchies
+- **Dependency Graph Walking**: Automatically fetch and sync entire task hierarchies
 - **Protocol Buffers Architecture**: Uses protobuf as internal data format with YAML rendering layer
-- **Hierarchical Mapping**: Converts Jira epics, stories, and subtasks to beads format
+- **Hierarchical Mapping**: Syncs Jira epics, stories, and subtasks to beads format
 - **Dependency Preservation**: Maintains issue links and parent-child relationships
+- **State Synchronization**: Push beads status changes back to Jira
 - **Type-Safe Conversion**: Strong typing through protobuf definitions
 - **Multiple Platforms**: Binaries available for Linux, macOS, and Windows (x86_64 and ARM64)
 
@@ -80,13 +82,13 @@ make build
 
 ### Quickstart Mode (Recommended)
 
-Fetch issues directly from Jira and convert to beads format:
+Fetch issues directly from Jira and sync to beads format:
 
 ```bash
 # Configure Jira credentials (one-time setup)
 jira-beads-sync configure
 
-# Fetch and convert a Jira issue with its entire dependency graph
+# Fetch and sync a Jira issue with its entire dependency graph
 jira-beads-sync quickstart https://jira.example.com/browse/PROJ-123
 
 # Or use issue key directly (uses base URL from config)
@@ -96,8 +98,26 @@ jira-beads-sync quickstart PROJ-123
 The quickstart command will:
 1. Fetch the specified issue from Jira
 2. Recursively walk the dependency graph (subtasks, linked issues, parents)
-3. Convert all issues to beads format
+3. Sync all issues to beads format
 4. Generate YAML files in `.beads/` directory
+
+### Sync Mode
+
+Sync beads state changes back to Jira:
+
+```bash
+# Sync beads status changes back to Jira (coming soon)
+jira-beads-sync sync
+
+# Sync specific issues
+jira-beads-sync sync PROJ-123 PROJ-456
+```
+
+The sync command will:
+1. Detect changes in beads issues (status, assignee, etc.)
+2. Map beads state to Jira fields
+3. Update corresponding Jira issues via API
+4. Preserve bidirectional consistency
 
 ### Configuration
 
@@ -127,12 +147,14 @@ To generate a Jira API token, visit: https://id.atlassian.com/manage-profile/sec
 
 ### Convert Mode
 
-Convert a previously exported Jira JSON file:
+Convert a previously exported Jira JSON file (one-way conversion):
 
 ```bash
 # Convert a Jira export file to beads format
 jira-beads-sync convert jira-export.json
 ```
+
+Note: Convert mode is one-way only. For bidirectional sync, use quickstart mode with API credentials.
 
 ### Other Commands
 
@@ -146,7 +168,7 @@ jira-beads-sync help
 
 ## Claude Code Plugin
 
-This tool can be used as a Claude Code plugin to import Jira issues through natural language:
+This tool can be used as a Claude Code plugin to sync Jira issues through natural language:
 
 ```bash
 # Install and start Claude with plugin
@@ -156,6 +178,7 @@ claude --plugin-dir /path/to/jira-beads-sync
 Then use natural language commands:
 - "Import PROJ-123 from Jira"
 - "Fetch the Jira issue TEAM-456 and all its dependencies"
+- "Sync beads changes back to Jira"
 - "Configure my Jira credentials"
 
 See [PLUGIN.md](PLUGIN.md) for complete plugin documentation and usage examples.
