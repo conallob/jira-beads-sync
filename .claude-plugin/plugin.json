@@ -1,6 +1,6 @@
 {
   "name": "jira-beads-sync",
-  "description": "Import Jira issues and task trees into beads issue tracker. Fetch issues directly from Jira API or convert exported JSON files.",
+  "description": "A helper tool to sync a tree of Jira tasks into beads tasks, and sync beads state back to Jira.",
   "version": "0.1.0",
   "author": {
     "name": "Conall O'Brien",
@@ -15,7 +15,8 @@
     "issue-tracker",
     "task-management",
     "import",
-    "conversion"
+    "conversion",
+    "sync"
   ],
   "requirements": {
     "commands": ["jira-beads-sync"],
