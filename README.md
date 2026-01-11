@@ -6,245 +6,184 @@
 [![Release](https://img.shields.io/github/v/release/conallob/jira-beads-sync)](https://github.com/conallob/jira-beads-sync/releases/latest)
 [![BuyMeACoffee](https://raw.githubusercontent.com/pachadotdev/buymeacoffee-badges/main/bmc-yellow.svg)](https://www.buymeacoffee.com/conallob)
 
-A Go-based CLI tool to sync Jira task trees with beads issues. This tool handles the hierarchical structure of Jira tasks (epics, stories, subtasks) and provides bidirectional synchronization between Jira and the beads issue tracking system while preserving dependencies and relationships.
+> Bridge Jira and beads: Import Jira issues locally, work with git-backed issue tracking, sync changes back to Jira.
 
-## Features
+**jira-beads-sync** synchronizes Jira issues with [beads](https://github.com/conallob/beads), a git-backed issue tracker. Work with Jira issues as YAML files in your repository, manage them with beads commands or Claude Code, then sync your changes back to Jira.
 
-- **Bidirectional Synchronization**: Sync Jira tasks to beads and sync beads state back to Jira
-- **Claude Code Plugin**: Import and sync Jira issues through natural language with Claude Code
-- **Quickstart Mode**: Fetch issues directly from Jira with a single command
-- **Dependency Graph Walking**: Automatically fetch and sync entire task hierarchies
-- **Protocol Buffers Architecture**: Uses protobuf as internal data format with YAML rendering layer
-- **Hierarchical Mapping**: Syncs Jira epics, stories, and subtasks to beads format
-- **Dependency Preservation**: Maintains issue links and parent-child relationships
-- **State Synchronization**: Push beads status changes back to Jira
-- **Type-Safe Conversion**: Strong typing through protobuf definitions
-- **Multiple Platforms**: Binaries available for Linux, macOS, and Windows (x86_64 and ARM64)
+Perfect for developers who want to:
+- Track Jira issues alongside code in version control
+- Work with issues offline using beads
+- Use natural language with Claude Code to manage issues
+- Maintain bidirectional sync between Jira and local git repos
+
+## Quick Links
+
+📚 **New to jira-beads-sync?** → [Getting Started Guide](GETTING_STARTED.md)
+
+🎯 **Use Cases:**
+- **CLI User?** → [CLI Guide](docs/CLI_GUIDE.md) - Complete command reference
+- **Claude Code User?** → [Plugin Guide](docs/PLUGIN_GUIDE.md) - Natural language workflows
+- **Need Examples?** → [Real-World Examples](docs/EXAMPLES.md) - Practical scenarios
+
+👩‍💻 **For Developers:**
+- [CLAUDE.md](CLAUDE.md) - Architecture and development guide
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
+
+## What Does It Do?
+
+```bash
+# Import a Jira issue with all its dependencies
+jira-beads-sync quickstart PROJ-123
+
+# Work locally with beads
+bd list
+bd show proj-123
+bd update proj-123 --status in_progress
+
+# Sync changes back to Jira
+jira-beads-sync sync
+```
+
+Or use natural language with Claude Code:
+
+```
+You: Import PROJ-123 from Jira
+
+Claude: [Imports issue and dependencies]
+        ✓ Fetched 5 issue(s)
+        Ready to work!
+```
+
+## Key Features
+
+- ✅ **Bidirectional Sync**: Import from Jira ↔ Work locally ↔ Push back to Jira
+- ✅ **Automatic Dependencies**: Recursively fetches epics, stories, subtasks, and links
+- ✅ **Two Interfaces**: CLI commands or natural language with Claude Code
+- ✅ **Preserves Structure**: Maintains hierarchies, relationships, and metadata
+- ✅ **Git-Backed**: Issues stored as YAML files in `.beads/` directory
+- ✅ **Type-Safe**: Built on Protocol Buffers for reliability
 
 ## Installation
 
-### Download Pre-built Binary
+### Homebrew (Recommended for macOS/Linux)
 
-Download the latest release for your platform from the [releases page](https://github.com/conallob/jira-beads-sync/releases/latest).
-
-**macOS (Homebrew):**
 ```bash
 brew tap conallob/tap
 brew install jira-beads-sync
 ```
 
-**macOS (Manual):**
+### From Binary
+
+Download from the [releases page](https://github.com/conallob/jira-beads-sync/releases/latest) or:
+
 ```bash
-# For Apple Silicon (M1/M2/M3)
+# macOS (Apple Silicon)
 curl -LO https://github.com/conallob/jira-beads-sync/releases/latest/download/jira-beads-sync_Darwin_arm64.tar.gz
 tar xzf jira-beads-sync_Darwin_arm64.tar.gz
 sudo mv jira-beads-sync /usr/local/bin/
 
-# For Intel
-curl -LO https://github.com/conallob/jira-beads-sync/releases/latest/download/jira-beads-sync_Darwin_x86_64.tar.gz
-tar xzf jira-beads-sync_Darwin_x86_64.tar.gz
-sudo mv jira-beads-sync /usr/local/bin/
-```
-
-**Linux:**
-```bash
-# For x86_64
+# Linux (x86_64)
 curl -LO https://github.com/conallob/jira-beads-sync/releases/latest/download/jira-beads-sync_Linux_x86_64.tar.gz
 tar xzf jira-beads-sync_Linux_x86_64.tar.gz
 sudo mv jira-beads-sync /usr/local/bin/
-
-# For ARM64
-curl -LO https://github.com/conallob/jira-beads-sync/releases/latest/download/jira-beads-sync_Linux_arm64.tar.gz
-tar xzf jira-beads-sync_Linux_arm64.tar.gz
-sudo mv jira-beads-sync /usr/local/bin/
 ```
 
-**Docker:**
-```bash
-docker pull ghcr.io/conallob/jira-beads-sync:latest
-docker run --rm -v $(pwd):/data ghcr.io/conallob/jira-beads-sync:latest convert /data/jira-export.json
-```
-
-### Install from Source
+### From Source
 
 ```bash
 go install github.com/conallob/jira-beads-sync/cmd/jira-beads-sync@latest
 ```
 
-Or build from source:
+**More options:** See [Getting Started Guide](GETTING_STARTED.md#installation) for all installation methods including Docker, DEB, and RPM packages.
+
+## Quick Start
+
+### 1. Configure Credentials
 
 ```bash
-git clone https://github.com/conallob/jira-beads-sync.git
-cd jira-beads-sync
-make build
+jira-beads-sync configure
 ```
 
-## Usage
+You'll need a Jira API token from https://id.atlassian.com/manage-profile/security/api-tokens
 
-### Quickstart Mode (Recommended)
-
-Fetch issues directly from Jira and sync to beads format:
+### 2. Import a Jira Issue
 
 ```bash
-# Configure Jira credentials (one-time setup)
-jira-beads-sync configure
-
-# Fetch and sync a Jira issue with its entire dependency graph
-jira-beads-sync quickstart https://jira.example.com/browse/PROJ-123
-
-# Or use issue key directly (uses base URL from config)
 jira-beads-sync quickstart PROJ-123
 ```
 
-The quickstart command will:
-1. Fetch the specified issue from Jira
-2. Recursively walk the dependency graph (subtasks, linked issues, parents)
-3. Sync all issues to beads format
-4. Generate YAML files in `.beads/` directory
+This fetches the issue and all its dependencies (subtasks, linked issues, parent issues).
 
-### Sync Mode
-
-Sync beads state changes back to Jira:
+### 3. Work Locally
 
 ```bash
-# Sync beads status changes back to Jira (coming soon)
+bd list                              # List all issues
+bd show proj-123                     # Show details
+bd update proj-123 --status in_progress
+```
+
+### 4. Sync Back to Jira
+
+```bash
 jira-beads-sync sync
-
-# Sync specific issues
-jira-beads-sync sync PROJ-123 PROJ-456
 ```
 
-The sync command will:
-1. Detect changes in beads issues (status, assignee, etc.)
-2. Map beads state to Jira fields
-3. Update corresponding Jira issues via API
-4. Preserve bidirectional consistency
+**📖 Detailed Usage:** See [CLI Guide](docs/CLI_GUIDE.md) for all commands and options.
 
-### Configuration
+## Using with Claude Code
 
-Jira credentials can be configured in three ways (in order of precedence):
-
-1. **Interactive configuration:**
-   ```bash
-   jira-beads-sync configure
-   ```
-
-2. **Environment variables:**
-   ```bash
-   export JIRA_BASE_URL=https://jira.example.com
-   export JIRA_USERNAME=your-email@example.com
-   export JIRA_API_TOKEN=your-api-token
-   ```
-
-3. **Config file** at `~/.config/jira-beads-sync/config.yml`:
-   ```yaml
-   jira:
-     base_url: https://jira.example.com
-     username: your-email@example.com
-     api_token: your-api-token
-   ```
-
-To generate a Jira API token, visit: https://id.atlassian.com/manage-profile/security/api-tokens
-
-### Convert Mode
-
-Convert a previously exported Jira JSON file (one-way conversion):
+Enable natural language issue management:
 
 ```bash
-# Convert a Jira export file to beads format
-jira-beads-sync convert jira-export.json
-```
-
-Note: Convert mode is one-way only. For bidirectional sync, use quickstart mode with API credentials.
-
-### Other Commands
-
-```bash
-# Show version
-jira-beads-sync version
-
-# Show help
-jira-beads-sync help
-```
-
-## Claude Code Plugin
-
-This tool can be used as a Claude Code plugin to sync Jira issues through natural language:
-
-```bash
-# Install and start Claude with plugin
 claude --plugin-dir /path/to/jira-beads-sync
 ```
 
-Then use natural language commands:
-- "Import PROJ-123 from Jira"
-- "Fetch the Jira issue TEAM-456 and all its dependencies"
-- "Sync beads changes back to Jira"
-- "Configure my Jira credentials"
-
-See [PLUGIN.md](PLUGIN.md) for complete plugin documentation and usage examples.
-
-## Development
-
-This project uses a Makefile for common development tasks:
-
-```bash
-make help        # Show all available targets
-make proto       # Generate protobuf files
-make build       # Build the binary
-make test        # Run tests with coverage
-make lint        # Run linter
-make fmt         # Format code
-make verify      # Run all verification steps (fmt, lint, test)
-```
-
-### Requirements
-
-- Go 1.21 or later
-- Protocol Buffers compiler (`protoc`)
-- `protoc-gen-go` plugin
-- `golangci-lint` for linting
-
-### Architecture
-
-This tool uses Protocol Buffers as the internal data structure format:
+Then simply ask Claude:
 
 ```
-JSON (Jira) → Protobuf (Jira) → Protobuf (Beads) → YAML (Beads)
-     ↓              ↓                  ↓               ↓
-  Adapter    Generated Types    Converter      Renderer
+You: Import PROJ-123 from Jira
+You: Show me all open issues
+You: Mark PROJ-124 as in progress
+You: Sync changes back to Jira
 ```
 
-See [CLAUDE.md](CLAUDE.md) for detailed architecture documentation.
+**📖 Plugin Guide:** See [Plugin Guide](docs/PLUGIN_GUIDE.md) for complete plugin documentation.
 
-## Project Structure
+## How It Works
 
-- `cmd/jira-beads-sync/` - Main application entry point
-- `internal/jira/` - Jira JSON to protobuf adapter
-- `internal/beads/` - YAML rendering layer on top of protobuf
-- `internal/converter/` - Conversion logic between Jira and beads protobuf
-- `proto/` - Protocol Buffer definitions (source of truth for data structures)
-- `gen/` - Generated Go code from protobuf definitions
-- `.github/workflows/` - CI/CD workflows
+This tool uses Protocol Buffers internally for type-safe data handling:
 
-## Releasing
-
-Releases are automated via GitHub Actions and GoReleaser:
-
-1. Create a new tag: `git tag -a v1.0.0 -m "Release v1.0.0"`
-2. Push the tag: `git push origin v1.0.0`
-3. GitHub Actions will automatically:
-   - Run tests
-   - Build binaries for all platforms
-   - Create GitHub release with artifacts
-   - Build and push Docker images
-   - Update Homebrew formula
-
-To test the release process locally:
-```bash
-make release-dry-run  # Test without publishing
 ```
+Jira (JSON) → Protobuf → beads (YAML) → Protobuf → Jira (JSON)
+     ↓           ↓             ↓           ↓           ↓
+  Fetch     Convert      Render      Detect      Update
+```
+
+**Learn more:** See [CLAUDE.md](CLAUDE.md) for detailed architecture and [CONTRIBUTING.md](CONTRIBUTING.md) for development setup.
+
+## Contributing
+
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- Development setup
+- Coding standards
+- Testing guidelines
+- Pull request process
+
+## Resources
+
+- 📚 [Getting Started Guide](GETTING_STARTED.md) - New user walkthrough
+- 🖥️ [CLI Guide](docs/CLI_GUIDE.md) - Complete CLI reference
+- 🤖 [Plugin Guide](docs/PLUGIN_GUIDE.md) - Claude Code plugin usage
+- 💡 [Examples](docs/EXAMPLES.md) - Real-world scenarios
+- 🏗️ [CLAUDE.md](CLAUDE.md) - Architecture for developers
+- 🤝 [Contributing](CONTRIBUTING.md) - Development guidelines
+
+## Support
+
+- **Issues:** https://github.com/conallob/jira-beads-sync/issues
+- **Discussions:** https://github.com/conallob/jira-beads-sync/discussions
+- **Sponsor:** [![BuyMeACoffee](https://raw.githubusercontent.com/pachadotdev/buymeacoffee-badges/main/bmc-yellow.svg)](https://www.buymeacoffee.com/conallob)
 
 ## License
 
-See LICENSE file for details.
+BSD-3-Clause - See [LICENSE](LICENSE) file for details.
