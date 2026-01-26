@@ -11,6 +11,13 @@ import (
 	"github.com/conallob/jira-beads-sync/internal/jira"
 )
 
+// Build-time variables injected via ldflags by goreleaser
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
 	if len(os.Args) < 2 {
 		printUsage()
@@ -71,7 +78,9 @@ func main() {
 			os.Exit(1)
 		}
 	case "version":
-		fmt.Println("jira-beads-sync v0.1.0")
+		fmt.Printf("jira-beads-sync %s\n", version)
+		fmt.Printf("  commit: %s\n", commit)
+		fmt.Printf("  built:  %s\n", date)
 	case "help", "--help", "-h":
 		printUsage()
 	default:
@@ -156,15 +165,17 @@ func runQuickstart(urlOrKey string) error {
 		return fmt.Errorf("failed to convert: %w", err)
 	}
 
-	// Render to YAML
-	yamlRenderer := beads.NewYAMLRenderer(outputDir)
-	if err := yamlRenderer.RenderExport(beadsExport); err != nil {
+	// Render to JSONL
+	jsonlRenderer := beads.NewJSONLRenderer(outputDir)
+	if err := jsonlRenderer.RenderExport(beadsExport); err != nil {
 		return fmt.Errorf("failed to render: %w", err)
 	}
 
 	fmt.Println("\n✓ Conversion complete!")
-	fmt.Printf("  %d epic(s) written to %s/.beads/epics/\n", len(beadsExport.Epics), outputDir)
-	fmt.Printf("  %d issue(s) written to %s/.beads/issues/\n", len(beadsExport.Issues), outputDir)
+	if len(beadsExport.Epics) > 0 {
+		fmt.Printf("  %d epic(s) written to %s/.beads/epics.jsonl\n", len(beadsExport.Epics), outputDir)
+	}
+	fmt.Printf("  %d issue(s) written to %s/.beads/issues.jsonl\n", len(beadsExport.Issues), outputDir)
 
 	return nil
 }
@@ -299,15 +310,17 @@ func runFetchByLabel(label string) error {
 		return fmt.Errorf("failed to convert: %w", err)
 	}
 
-	// Render to YAML
-	yamlRenderer := beads.NewYAMLRenderer(outputDir)
-	if err := yamlRenderer.RenderExport(beadsExport); err != nil {
+	// Render to JSONL
+	jsonlRenderer := beads.NewJSONLRenderer(outputDir)
+	if err := jsonlRenderer.RenderExport(beadsExport); err != nil {
 		return fmt.Errorf("failed to render: %w", err)
 	}
 
 	fmt.Println("\n✓ Conversion complete!")
-	fmt.Printf("  %d epic(s) written to %s/.beads/epics/\n", len(beadsExport.Epics), outputDir)
-	fmt.Printf("  %d issue(s) written to %s/.beads/issues/\n", len(beadsExport.Issues), outputDir)
+	if len(beadsExport.Epics) > 0 {
+		fmt.Printf("  %d epic(s) written to %s/.beads/epics.jsonl\n", len(beadsExport.Epics), outputDir)
+	}
+	fmt.Printf("  %d issue(s) written to %s/.beads/issues.jsonl\n", len(beadsExport.Issues), outputDir)
 
 	return nil
 }
@@ -322,15 +335,15 @@ func runAnnotate(issueID, repository string) error {
 		return fmt.Errorf("failed to get current directory: %w", err)
 	}
 
-	yamlRenderer := beads.NewYAMLRenderer(outputDir)
+	jsonlRenderer := beads.NewJSONLRenderer(outputDir)
 
 	// Add repository annotation
-	if err := yamlRenderer.AddRepositoryAnnotation(issueID, repository); err != nil {
+	if err := jsonlRenderer.AddRepositoryAnnotation(issueID, repository); err != nil {
 		return fmt.Errorf("failed to annotate issue: %w", err)
 	}
 
 	fmt.Printf("✓ Added repository '%s' to issue %s\n", repository, issueID)
-	fmt.Printf("  Updated: %s/.beads/issues/%s.yaml\n", outputDir, issueID)
+	fmt.Printf("  Updated: %s/.beads/issues.jsonl\n", outputDir)
 
 	return nil
 }
