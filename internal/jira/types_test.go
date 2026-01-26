@@ -99,13 +99,13 @@ func TestJiraTimeUnmarshalJSON(t *testing.T) {
 
 			// For empty string and null cases, check that time is zero
 			if tt.input == `""` || tt.input == `null` {
-				if !jt.Time.IsZero() {
+				if !jt.IsZero() {
 					t.Errorf("JiraTime.UnmarshalJSON() for %s should result in zero time, got %v", tt.input, jt.Time)
 				}
 				return
 			}
 
-			if !jt.Time.Equal(tt.wantTime) {
+			if !jt.Equal(tt.wantTime) {
 				t.Errorf("JiraTime.UnmarshalJSON() time = %v, want %v", jt.Time, tt.wantTime)
 			}
 		})
@@ -132,7 +132,7 @@ func TestJiraTimeUnmarshalJSONInStruct(t *testing.T) {
 			check: func(t *testing.T, ts TestStruct) {
 				expectedCreated := time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC)
 				expectedUpdated := time.Date(2024, 1, 15, 14, 30, 0, 0, time.UTC)
-				if !ts.Created.Time.Equal(expectedCreated) {
+				if !ts.Created.Equal(expectedCreated) {
 					t.Errorf("Created time = %v, want %v", ts.Created.Time, expectedCreated)
 				}
 				if !ts.Updated.Time.Equal(expectedUpdated) {
