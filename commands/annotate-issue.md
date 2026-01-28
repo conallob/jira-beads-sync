@@ -32,7 +32,7 @@ Claude: I'll add the repository to proj-123's metadata.
 [Runs: jira-beads-sync annotate proj-123 https://github.com/org/frontend]
 
 ✓ Added repository 'https://github.com/org/frontend' to issue proj-123
-  Updated: .beads/issues/proj-123.yaml
+  Updated: .beads/issues.jsonl
 ```
 
 ### Example 2: Simple Repository Name
@@ -78,19 +78,9 @@ Done! PROJ-100 is now associated with the mobile-app repository.
 
 The repository information is added to the issue's metadata under the `repositories` field:
 
-```yaml
-# .beads/issues/proj-123.yaml
-id: proj-123
-title: Implement user authentication
-status: in_progress
-priority: p1
-metadata:
-  jiraKey: PROJ-123
-  jiraId: "10001"
-  jiraIssueType: Story
-  repositories:
-    - https://github.com/org/frontend
-    - https://github.com/org/auth-service
+```json
+// .beads/issues.jsonl (one JSON object per line)
+{"id":"proj-123","title":"Implement user authentication","status":"in_progress","priority":"p1","metadata":{"jiraKey":"PROJ-123","jiraId":"10001","jiraIssueType":"Story","repositories":"https://github.com/org/frontend,https://github.com/org/auth-service"}}
 ```
 
 ## Use Cases
@@ -166,7 +156,7 @@ Each repository is added to the issue's `repositories` array. Duplicate reposito
 
 ### Issue Not Found
 ```
-Error: issue file not found: .beads/issues/proj-999.yaml
+Error: issue proj-999 not found in issues file
 
 Make sure the issue exists (run quickstart to import from Jira first)
 ```

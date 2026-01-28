@@ -228,6 +228,222 @@ func TestPriorityConversion(t *testing.T) {
 	}
 }
 
+func TestAddRepositoryAnnotation(t *testing.T) {
+	t.Run("add repository to issue", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		renderer := NewJSONLRenderer(tmpDir)
+
+		// Create initial issues file
+		export := &pb.Export{
+			Issues: []*pb.Issue{
+				{
+					Id:       "proj-123",
+					Title:    "Test Issue",
+					Status:   pb.Status_STATUS_OPEN,
+					Priority: pb.Priority_PRIORITY_P1,
+					Metadata: &pb.Metadata{
+						JiraKey: "PROJ-123",
+					},
+				},
+			},
+		}
+
+		err := renderer.RenderExport(export)
+		if err != nil {
+			t.Fatalf("RenderExport failed: %v", err)
+		}
+
+		// Add a repository annotation
+		err = renderer.AddRepositoryAnnotation("proj-123", "https://github.com/org/frontend")
+		if err != nil {
+			t.Fatalf("AddRepositoryAnnotation failed: %v", err)
+		}
+
+		// Verify the repository was added
+		issuesFile := filepath.Join(tmpDir, ".beads", "issues.jsonl")
+		file, err := os.Open(issuesFile)
+		if err != nil {
+			t.Fatalf("Failed to open issues file: %v", err)
+		}
+		defer file.Close()
+
+		scanner := bufio.NewScanner(file)
+		if !scanner.Scan() {
+			t.Fatal("No issues in file")
+		}
+
+		var issue BeadsIssue
+		if err := json.Unmarshal(scanner.Bytes(), &issue); err != nil {
+			t.Fatalf("Failed to parse issue: %v", err)
+		}
+
+		if issue.Metadata["repositories"] != "https://github.com/org/frontend" {
+			t.Errorf("Expected repositories 'https://github.com/org/frontend', got '%s'", issue.Metadata["repositories"])
+		}
+	})
+
+	t.Run("add multiple repositories", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		renderer := NewJSONLRenderer(tmpDir)
+
+		// Create initial issues file
+		export := &pb.Export{
+			Issues: []*pb.Issue{
+				{
+					Id:       "proj-456",
+					Title:    "Multi-repo Issue",
+					Status:   pb.Status_STATUS_OPEN,
+					Priority: pb.Priority_PRIORITY_P2,
+				},
+			},
+		}
+
+		err := renderer.RenderExport(export)
+		if err != nil {
+			t.Fatalf("RenderExport failed: %v", err)
+		}
+
+		// Add first repository
+		err = renderer.AddRepositoryAnnotation("proj-456", "https://github.com/org/frontend")
+		if err != nil {
+			t.Fatalf("AddRepositoryAnnotation failed: %v", err)
+		}
+
+		// Add second repository
+		err = renderer.AddRepositoryAnnotation("proj-456", "https://github.com/org/backend")
+		if err != nil {
+			t.Fatalf("AddRepositoryAnnotation failed: %v", err)
+		}
+
+		// Verify both repositories were added
+		issuesFile := filepath.Join(tmpDir, ".beads", "issues.jsonl")
+		file, err := os.Open(issuesFile)
+		if err != nil {
+			t.Fatalf("Failed to open issues file: %v", err)
+		}
+		defer file.Close()
+
+		scanner := bufio.NewScanner(file)
+		if !scanner.Scan() {
+			t.Fatal("No issues in file")
+		}
+
+		var issue BeadsIssue
+		if err := json.Unmarshal(scanner.Bytes(), &issue); err != nil {
+			t.Fatalf("Failed to parse issue: %v", err)
+		}
+
+		expected := "https://github.com/org/frontend,https://github.com/org/backend"
+		if issue.Metadata["repositories"] != expected {
+			t.Errorf("Expected repositories '%s', got '%s'", expected, issue.Metadata["repositories"])
+		}
+	})
+
+	t.Run("duplicate detection", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		renderer := NewJSONLRenderer(tmpDir)
+
+		// Create initial issues file
+		export := &pb.Export{
+			Issues: []*pb.Issue{
+				{
+					Id:       "proj-789",
+					Title:    "Duplicate Test Issue",
+					Status:   pb.Status_STATUS_OPEN,
+					Priority: pb.Priority_PRIORITY_P1,
+				},
+			},
+		}
+
+		err := renderer.RenderExport(export)
+		if err != nil {
+			t.Fatalf("RenderExport failed: %v", err)
+		}
+
+		// Add repository first time
+		err = renderer.AddRepositoryAnnotation("proj-789", "https://github.com/org/repo")
+		if err != nil {
+			t.Fatalf("First AddRepositoryAnnotation failed: %v", err)
+		}
+
+		// Try to add same repository again
+		err = renderer.AddRepositoryAnnotation("proj-789", "https://github.com/org/repo")
+		if err == nil {
+			t.Fatal("Expected error for duplicate repository, got nil")
+		}
+		if !strings.Contains(err.Error(), "already associated") {
+			t.Errorf("Expected 'already associated' error, got: %v", err)
+		}
+	})
+
+	t.Run("issue not found", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		renderer := NewJSONLRenderer(tmpDir)
+
+		// Create issues file with different issue
+		export := &pb.Export{
+			Issues: []*pb.Issue{
+				{
+					Id:     "other-issue",
+					Title:  "Other Issue",
+					Status: pb.Status_STATUS_OPEN,
+				},
+			},
+		}
+
+		err := renderer.RenderExport(export)
+		if err != nil {
+			t.Fatalf("RenderExport failed: %v", err)
+		}
+
+		// Try to annotate non-existent issue
+		err = renderer.AddRepositoryAnnotation("proj-999", "https://github.com/org/repo")
+		if err == nil {
+			t.Fatal("Expected error for non-existent issue, got nil")
+		}
+		if !strings.Contains(err.Error(), "not found") {
+			t.Errorf("Expected 'not found' error, got: %v", err)
+		}
+	})
+
+	t.Run("invalid file", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		renderer := NewJSONLRenderer(tmpDir)
+
+		// Don't create any issues file
+		err := renderer.AddRepositoryAnnotation("proj-123", "https://github.com/org/repo")
+		if err == nil {
+			t.Fatal("Expected error for missing issues file, got nil")
+		}
+	})
+}
+
+func TestIssueToJSONWithRepositories(t *testing.T) {
+	renderer := NewJSONLRenderer("/tmp/test")
+
+	issue := &pb.Issue{
+		Id:       "test-repo-123",
+		Title:    "Issue with Repositories",
+		Status:   pb.Status_STATUS_OPEN,
+		Priority: pb.Priority_PRIORITY_P1,
+		Metadata: &pb.Metadata{
+			JiraKey:      "PROJ-123",
+			Repositories: []string{"https://github.com/org/frontend", "https://github.com/org/backend"},
+		},
+	}
+
+	jsonIssue := renderer.issueToJSON(issue)
+
+	if jsonIssue.Metadata == nil {
+		t.Fatal("Metadata is nil")
+	}
+
+	expectedRepos := "https://github.com/org/frontend,https://github.com/org/backend"
+	if jsonIssue.Metadata["repositories"] != expectedRepos {
+		t.Errorf("Expected repositories '%s', got '%s'", expectedRepos, jsonIssue.Metadata["repositories"])
+	}
+}
+
 func TestJSONLFormat(t *testing.T) {
 	tmpDir := t.TempDir()
 	renderer := NewJSONLRenderer(tmpDir)

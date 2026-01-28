@@ -161,6 +161,9 @@ func (r *JSONLRenderer) issueToJSON(issue *pb.Issue) *BeadsIssue {
 		for k, v := range issue.Metadata.Custom {
 			jsonIssue.Metadata[k] = v
 		}
+		if len(issue.Metadata.Repositories) > 0 {
+			jsonIssue.Metadata["repositories"] = strings.Join(issue.Metadata.Repositories, ",")
+		}
 	}
 
 	return jsonIssue
