@@ -176,6 +176,27 @@ Users will:
 4. Validate that hierarchy and dependencies are correct
 5. Work in beads, then sync changes back to Jira: `jira-beads-sync sync`
 
+### Fetch by Label
+Users can fetch all issues with a specific label:
+1. Run: `jira-beads-sync fetch-by-label sprint-23`
+2. The tool fetches all issues labeled "sprint-23" and their dependencies
+3. Converts and syncs to beads format
+
+### Fetch by JQL (Advanced)
+Users can use JQL (Jira Query Language) for complex queries:
+1. Run: `jira-beads-sync fetch-jql 'project = EVALCONC AND assignee = currentUser() AND status IN ("READY TO START", "In Progress")'`
+2. The tool fetches all issues matching the JQL query and their dependencies
+3. Converts and syncs to beads format
+
+Common JQL examples:
+- Current user's open tasks: `'assignee = currentUser() AND status = Open'`
+- Sprint issues: `'project = MYPROJ AND sprint = 42'`
+- High priority bugs: `'project = MYPROJ AND issuetype = Bug AND priority = High'`
+- Updated recently: `'project = MYPROJ AND updated >= -7d'`
+- Multiple statuses: `'project = MYPROJ AND status IN ("To Do", "In Progress")'`
+
+Note: Enclose the entire JQL query in single quotes to prevent shell interpretation of special characters.
+
 ### Sync Mode (Bidirectional)
 Users will:
 1. Import issues from Jira using quickstart mode

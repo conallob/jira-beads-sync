@@ -331,3 +331,32 @@ func (c *Client) FetchIssuesByLabel(label string) (*pb.Export, error) {
 
 	return &pb.Export{Issues: issues}, nil
 }
+
+// FetchIssuesByJQL fetches all issues matching a JQL query and their dependencies
+func (c *Client) FetchIssuesByJQL(jql string) (*pb.Export, error) {
+	fmt.Printf("Searching with JQL: %s\n", jql)
+
+	issueKeys, err := c.SearchIssues(jql)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search by JQL: %w", err)
+	}
+
+	if len(issueKeys) == 0 {
+		return nil, fmt.Errorf("no issues found matching JQL query")
+	}
+
+	fmt.Printf("Found %d issue(s) matching query\n", len(issueKeys))
+	fmt.Println()
+
+	// Fetch all issues and their dependencies
+	visited := make(map[string]bool)
+	issues := make([]*pb.Issue, 0)
+
+	for _, key := range issueKeys {
+		if err := c.fetchRecursive(key, visited, &issues); err != nil {
+			return nil, err
+		}
+	}
+
+	return &pb.Export{Issues: issues}, nil
+}
