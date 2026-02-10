@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -1315,5 +1316,242 @@ func TestGetCurrentUserServerError(t *testing.T) {
 	_, err := client.GetCurrentUser()
 	if err == nil {
 		t.Error("Expected error for server error, got nil")
+	}
+}
+
+func TestFetchIssuesByJQL(t *testing.T) {
+	fetchedIssues := make(map[string]bool)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/rest/api/2/search":
+			// Verify JQL query is passed correctly
+			jql := r.URL.Query().Get("jql")
+			if jql == "" {
+				t.Error("Expected JQL query parameter to be present")
+			}
+
+			// Return search results
+			response := map[string]interface{}{
+				"issues": []map[string]interface{}{
+					{"key": "PROJ-100"},
+					{"key": "PROJ-101"},
+					{"key": "PROJ-102"},
+				},
+				"total": 3,
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			if err := json.NewEncoder(w).Encode(response); err != nil {
+				t.Errorf("Failed to encode response: %v", err)
+			}
+		default:
+			// Fetch individual issues
+			issueKey := r.URL.Path[len("/rest/api/2/issue/"):]
+			fetchedIssues[issueKey] = true
+
+			response := createMinimalIssue(issueKey, fmt.Sprintf("Issue %s", issueKey))
+
+			w.Header().Set("Content-Type", "application/json")
+			if err := json.NewEncoder(w).Encode(response); err != nil {
+				t.Errorf("Failed to encode response: %v", err)
+			}
+		}
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
+
+	export, err := client.FetchIssuesByJQL("project = PROJ AND status = Open")
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if export == nil {
+		t.Fatal("Expected export to be returned, got nil")
+	}
+
+	if len(export.Issues) != 3 {
+		t.Errorf("Expected 3 issues, got %d", len(export.Issues))
+	}
+
+	// Verify all issues were fetched
+	expectedKeys := []string{"PROJ-100", "PROJ-101", "PROJ-102"}
+	for _, key := range expectedKeys {
+		if !fetchedIssues[key] {
+			t.Errorf("Expected %s to be fetched", key)
+		}
+	}
+}
+
+func TestFetchIssuesByJQLWithDependencies(t *testing.T) {
+	fetchedIssues := make(map[string]bool)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/rest/api/2/search":
+			// Return search results
+			response := map[string]interface{}{
+				"issues": []map[string]interface{}{
+					{"key": "PROJ-100"},
+				},
+				"total": 1,
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			if err := json.NewEncoder(w).Encode(response); err != nil {
+				t.Errorf("Failed to encode response: %v", err)
+			}
+		default:
+			// Fetch individual issues
+			issueKey := r.URL.Path[len("/rest/api/2/issue/"):]
+			fetchedIssues[issueKey] = true
+
+			var response map[string]interface{}
+
+			switch issueKey {
+			case "PROJ-100":
+				response = map[string]interface{}{
+					"key": "PROJ-100",
+					"id":  "100",
+					"fields": map[string]interface{}{
+						"summary": "Main issue",
+						"issuetype": map[string]interface{}{
+							"name": "Story",
+						},
+						"status": map[string]interface{}{
+							"name": "Open",
+							"statusCategory": map[string]interface{}{
+								"key": "new",
+							},
+						},
+						"priority": map[string]interface{}{
+							"name": "Medium",
+						},
+						"created": "2024-01-01T10:00:00.000+0000",
+						"updated": "2024-01-01T10:00:00.000+0000",
+						"subtasks": []map[string]interface{}{
+							{"key": "PROJ-101"},
+						},
+						"issuelinks": []map[string]interface{}{
+							{
+								"type": map[string]interface{}{
+									"name": "Blocks",
+								},
+								"outwardIssue": map[string]interface{}{
+									"key": "PROJ-102",
+								},
+							},
+						},
+					},
+				}
+			case "PROJ-101":
+				response = createMinimalIssue("PROJ-101", "Subtask")
+			case "PROJ-102":
+				response = createMinimalIssue("PROJ-102", "Linked issue")
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			if err := json.NewEncoder(w).Encode(response); err != nil {
+				t.Errorf("Failed to encode response: %v", err)
+			}
+		}
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
+
+	export, err := client.FetchIssuesByJQL("assignee = currentUser()")
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	// Should have fetched the main issue, subtask, and linked issue
+	if len(export.Issues) != 3 {
+		t.Errorf("Expected 3 issues (main + subtask + linked), got %d", len(export.Issues))
+	}
+
+	// Verify all were fetched
+	expectedKeys := []string{"PROJ-100", "PROJ-101", "PROJ-102"}
+	for _, key := range expectedKeys {
+		if !fetchedIssues[key] {
+			t.Errorf("Expected %s to be fetched", key)
+		}
+	}
+}
+
+func TestFetchIssuesByJQLNoResults(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Return empty search results
+		response := map[string]interface{}{
+			"issues": []map[string]interface{}{},
+			"total":  0,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			t.Errorf("Failed to encode response: %v", err)
+		}
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
+
+	_, err := client.FetchIssuesByJQL("project = NONEXISTENT")
+	if err == nil {
+		t.Error("Expected error for JQL with no results, got nil")
+	}
+
+	expectedError := "no issues found matching JQL query"
+	if err.Error() != expectedError {
+		t.Errorf("Expected error '%s', got '%s'", expectedError, err.Error())
+	}
+}
+
+func TestFetchIssuesByJQLWithComplexQuery(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/rest/api/2/search":
+			// Verify complex JQL query is passed
+			jql := r.URL.Query().Get("jql")
+			if !strings.Contains(jql, "project") {
+				t.Error("Expected JQL to contain 'project'")
+			}
+
+			response := map[string]interface{}{
+				"issues": []map[string]interface{}{
+					{"key": "MYPROJ-1"},
+					{"key": "MYPROJ-2"},
+				},
+				"total": 2,
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			if err := json.NewEncoder(w).Encode(response); err != nil {
+				t.Errorf("Failed to encode response: %v", err)
+			}
+		default:
+			issueKey := r.URL.Path[len("/rest/api/2/issue/"):]
+			response := createMinimalIssue(issueKey, fmt.Sprintf("Issue %s", issueKey))
+
+			w.Header().Set("Content-Type", "application/json")
+			if err := json.NewEncoder(w).Encode(response); err != nil {
+				t.Errorf("Failed to encode response: %v", err)
+			}
+		}
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
+
+	// Test with complex JQL query
+	jql := `project = MYPROJ AND assignee = currentUser() AND status IN ("READY TO START", "In Progress")`
+	export, err := client.FetchIssuesByJQL(jql)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if len(export.Issues) != 2 {
+		t.Errorf("Expected 2 issues, got %d", len(export.Issues))
 	}
 }
