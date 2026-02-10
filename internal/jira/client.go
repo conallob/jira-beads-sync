@@ -30,7 +30,7 @@ func NewClient(baseURL, username, apiToken, authMethod string) *Client {
 	if authMethod == "" {
 		authMethod = "basic"
 	}
-	
+
 	return &Client{
 		baseURL:    strings.TrimSuffix(baseURL, "/"),
 		httpClient: &http.Client{},
