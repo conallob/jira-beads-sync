@@ -44,6 +44,116 @@ func TestNewClientTrimsTrailingSlash(t *testing.T) {
 	}
 }
 
+func TestNewClientWithBearerAuth(t *testing.T) {
+	client := NewClient("https://jira.example.com", "", "my-bearer-token-123", "bearer")
+
+	if client == nil {
+		t.Fatal("Expected client to be created, got nil")
+	}
+
+	if client.authMethod != "bearer" {
+		t.Errorf("Expected authMethod to be 'bearer', got '%s'", client.authMethod)
+	}
+
+	if client.apiToken != "my-bearer-token-123" {
+		t.Errorf("Expected apiToken to be 'my-bearer-token-123', got '%s'", client.apiToken)
+	}
+
+	// Username can be empty for bearer auth
+	if client.username != "" {
+		t.Errorf("Expected username to be empty, got '%s'", client.username)
+	}
+}
+
+func TestNewClientDefaultsToBasicAuth(t *testing.T) {
+	client := NewClient("https://jira.example.com", "user@example.com", "token123", "")
+
+	if client.authMethod != "basic" {
+		t.Errorf("Expected authMethod to default to 'basic', got '%s'", client.authMethod)
+	}
+}
+
+func TestFetchIssueWithBearerAuth(t *testing.T) {
+	// Create a test server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Verify the request
+		if r.URL.Path != "/rest/api/2/issue/PROJ-456" {
+			t.Errorf("Expected path '/rest/api/2/issue/PROJ-456', got '%s'", r.URL.Path)
+		}
+
+		if r.Method != "GET" {
+			t.Errorf("Expected GET method, got '%s'", r.Method)
+		}
+
+		// Check Bearer token authentication
+		authHeader := r.Header.Get("Authorization")
+		expectedAuth := "Bearer my-bearer-token-123"
+		if authHeader != expectedAuth {
+			t.Errorf("Expected Authorization header '%s', got '%s'", expectedAuth, authHeader)
+		}
+
+		// Verify Basic Auth is NOT present when using bearer
+		if _, _, ok := r.BasicAuth(); ok {
+			t.Error("Expected Basic Auth to be absent when using bearer token")
+		}
+
+		// Return a mock Jira issue
+		response := map[string]interface{}{
+			"key": "PROJ-456",
+			"id":  "45600",
+			"fields": map[string]interface{}{
+				"summary":     "Test Issue with Bearer Auth",
+				"description": "Testing bearer token authentication",
+				"issuetype": map[string]interface{}{
+					"name": "Story",
+				},
+				"status": map[string]interface{}{
+					"name": "Open",
+					"statusCategory": map[string]interface{}{
+						"key": "new",
+					},
+				},
+				"priority": map[string]interface{}{
+					"name": "Medium",
+				},
+				"created": "2024-01-01T10:00:00.000+0000",
+				"updated": "2024-01-15T14:30:00.000+0000",
+			},
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			t.Errorf("Failed to encode response: %v", err)
+		}
+	}))
+	defer server.Close()
+
+	// Create client with bearer auth
+	client := NewClient(server.URL, "", "my-bearer-token-123", "bearer")
+
+	// Fetch the issue
+	issue, err := client.FetchIssue("PROJ-456")
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if issue == nil {
+		t.Fatal("Expected issue to be returned, got nil")
+	}
+
+	if issue.Key != "PROJ-456" {
+		t.Errorf("Expected issue key 'PROJ-456', got '%s'", issue.Key)
+	}
+
+	if issue.Fields == nil {
+		t.Fatal("Expected issue fields to be present, got nil")
+	}
+
+	if issue.Fields.Summary != "Test Issue with Bearer Auth" {
+		t.Errorf("Expected summary 'Test Issue with Bearer Auth', got '%s'", issue.Fields.Summary)
+	}
+}
+
 func TestFetchIssue(t *testing.T) {
 	// Create a test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
