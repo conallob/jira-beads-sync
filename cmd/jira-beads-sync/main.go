@@ -47,6 +47,18 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
+	case "fetch-jql", "jql":
+		if len(os.Args) < 3 {
+			fmt.Fprintf(os.Stderr, "Error: fetch-jql requires a JQL query argument\n\n")
+			printUsage()
+			os.Exit(1)
+		}
+		// Join all remaining args as the JQL query
+		jqlQuery := strings.Join(os.Args[2:], " ")
+		if err := runFetchByJQL(jqlQuery); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 	case "annotate":
 		if len(os.Args) < 4 {
 			fmt.Fprintf(os.Stderr, "Error: annotate requires <issue-id> and <repository> arguments\n\n")
@@ -325,6 +337,71 @@ func runFetchByLabel(label string) error {
 	return nil
 }
 
+func runFetchByJQL(jqlQuery string) error {
+	fmt.Println("jira-beads-sync fetch-jql")
+	fmt.Println("=========================")
+	fmt.Println()
+
+	// Load configuration
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Println("⚠ No configuration found. Let's set it up!")
+		fmt.Println()
+		cfg, err = config.PromptForConfig()
+		if err != nil {
+			return fmt.Errorf("failed to configure: %w", err)
+		}
+		if err := cfg.Save(); err != nil {
+			fmt.Printf("⚠ Warning: failed to save config: %v\n", err)
+		} else {
+			fmt.Println("✓ Configuration saved")
+			fmt.Println()
+		}
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return fmt.Errorf("invalid configuration: %w. Run 'jira-beads-sync configure' to set up", err)
+	}
+
+	// Create Jira client
+	client := jira.NewClient(cfg.Jira.BaseURL, cfg.Jira.Username, cfg.Jira.APIToken, cfg.Jira.AuthMethod)
+
+	// Fetch issues by JQL
+	jiraExport, err := client.FetchIssuesByJQL(jqlQuery)
+	if err != nil {
+		return fmt.Errorf("failed to fetch issues by JQL: %w", err)
+	}
+
+	fmt.Printf("\n✓ Fetched %d issue(s) total (including dependencies)\n\n", len(jiraExport.Issues))
+
+	// Convert to beads format
+	outputDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	fmt.Println("Converting to beads format...")
+	protoConverter := converter.NewProtoConverter()
+	beadsExport, err := protoConverter.Convert(jiraExport)
+	if err != nil {
+		return fmt.Errorf("failed to convert: %w", err)
+	}
+
+	// Render to JSONL
+	jsonlRenderer := beads.NewJSONLRenderer(outputDir)
+	if err := jsonlRenderer.RenderExport(beadsExport); err != nil {
+		return fmt.Errorf("failed to render: %w", err)
+	}
+
+	fmt.Println("\n✓ Conversion complete!")
+	if len(beadsExport.Epics) > 0 {
+		fmt.Printf("  %d epic(s) written to %s/.beads/epics.jsonl\n", len(beadsExport.Epics), outputDir)
+	}
+	fmt.Printf("  %d issue(s) written to %s/.beads/issues.jsonl\n", len(beadsExport.Issues), outputDir)
+
+	return nil
+}
+
 func runAnnotate(issueID, repository string) error {
 	fmt.Println("jira-beads-sync annotate")
 	fmt.Println("========================")
@@ -354,6 +431,7 @@ func printUsage() {
 	fmt.Println("Usage:")
 	fmt.Println("  jira-beads-sync quickstart <jira-url>         Fetch issue from Jira and convert to beads")
 	fmt.Println("  jira-beads-sync fetch-by-label <label>        Fetch all issues with label from Jira")
+	fmt.Println("  jira-beads-sync fetch-jql <jql-query>         Fetch issues matching JQL query from Jira")
 	fmt.Println("  jira-beads-sync annotate <issue-id> <repo>    Annotate issue with repository info")
 	fmt.Println("  jira-beads-sync convert <jira-export-file>    Convert Jira export to beads format")
 	fmt.Println("  jira-beads-sync configure                     Configure Jira credentials")
@@ -365,6 +443,8 @@ func printUsage() {
 	fmt.Println("  jira-beads-sync quickstart https://jira.example.com/browse/PROJ-123")
 	fmt.Println("  jira-beads-sync quickstart PROJ-123")
 	fmt.Println("  jira-beads-sync fetch-by-label sprint-23")
+	fmt.Println("  jira-beads-sync fetch-jql 'project = MYPROJ AND assignee = currentUser() AND status IN (\"READY TO START\", \"In Progress\")'")
+	fmt.Println("  jira-beads-sync fetch-jql 'project = MYPROJ AND sprint = 42'")
 	fmt.Println("  jira-beads-sync annotate proj-123 https://github.com/org/repo")
 	fmt.Println("  jira-beads-sync convert jira-export.json")
 	fmt.Println("  jira-beads-sync configure")

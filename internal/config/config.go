@@ -69,7 +69,7 @@ func (c *Config) Validate() error {
 	if c.Jira.AuthMethod != "basic" && c.Jira.AuthMethod != "bearer" {
 		return fmt.Errorf("jira auth method must be 'basic' or 'bearer', got: %s", c.Jira.AuthMethod)
 	}
-	
+
 	// For basic auth, we need username and API token
 	if c.Jira.AuthMethod == "basic" {
 		if c.Jira.Username == "" {
@@ -79,14 +79,14 @@ func (c *Config) Validate() error {
 			return fmt.Errorf("jira API token is required")
 		}
 	}
-	
+
 	// For bearer auth, we only need the token (username is optional)
 	if c.Jira.AuthMethod == "bearer" {
 		if c.Jira.APIToken == "" {
 			return fmt.Errorf("jira bearer token is required")
 		}
 	}
-	
+
 	return nil
 }
 
@@ -160,16 +160,16 @@ func PromptForConfig() (*Config, error) {
 	fmt.Println("  1. Basic Auth (username + API token) - for Jira Cloud with .atlassian.net")
 	fmt.Println("  2. Bearer Token - for Jira Cloud with custom domain or Jira Server/Data Center")
 	fmt.Print("Select authentication method (1 or 2) [1]: ")
-	
+
 	var authChoice string
 	if _, err := fmt.Scanln(&authChoice); err != nil && err.Error() != "unexpected newline" {
 		return nil, fmt.Errorf("failed to read auth method: %w", err)
 	}
-	
+
 	// Default to basic auth if user just presses Enter
 	if authChoice == "" || authChoice == "1" {
 		config.Jira.AuthMethod = "basic"
-		
+
 		fmt.Println()
 		fmt.Print("Jira Username/Email: ")
 		if _, err := fmt.Scanln(&config.Jira.Username); err != nil {
@@ -182,13 +182,13 @@ func PromptForConfig() (*Config, error) {
 		}
 	} else if authChoice == "2" {
 		config.Jira.AuthMethod = "bearer"
-		
+
 		fmt.Println()
 		fmt.Print("Jira Bearer Token (Personal Access Token): ")
 		if _, err := fmt.Scanln(&config.Jira.APIToken); err != nil {
 			return nil, fmt.Errorf("failed to read bearer token: %w", err)
 		}
-		
+
 		// Username is optional for bearer auth but can be used for display purposes
 		fmt.Print("Username (optional, for display only): ")
 		fmt.Scanln(&config.Jira.Username) // Ignore errors for optional field
