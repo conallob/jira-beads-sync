@@ -105,7 +105,7 @@ type BeadsIssue struct {
 	Title       string            `json:"title"`
 	Description string            `json:"description,omitempty"`
 	Status      string            `json:"status"`
-	Priority    string            `json:"priority,omitempty"`
+	Priority    int               `json:"priority,omitempty"`
 	Epic        string            `json:"epic,omitempty"`
 	Assignee    string            `json:"assignee,omitempty"`
 	Labels      []string          `json:"labels,omitempty"`
@@ -133,7 +133,7 @@ func (r *JSONLRenderer) issueToJSON(issue *pb.Issue) *BeadsIssue {
 		Title:       issue.Title,
 		Description: issue.Description,
 		Status:      r.statusToString(issue.Status),
-		Priority:    r.priorityToString(issue.Priority),
+		Priority:    r.priorityToInt(issue.Priority),
 		Epic:        issue.Epic,
 		Assignee:    issue.Assignee,
 		Labels:      issue.Labels,
@@ -214,21 +214,21 @@ func (r *JSONLRenderer) statusToString(status pb.Status) string {
 	}
 }
 
-// priorityToString converts priority enum to string
-func (r *JSONLRenderer) priorityToString(priority pb.Priority) string {
+// priorityToInt converts priority enum to integer (0-4)
+func (r *JSONLRenderer) priorityToInt(priority pb.Priority) int {
 	switch priority {
 	case pb.Priority_PRIORITY_P0:
-		return "p0"
+		return 0
 	case pb.Priority_PRIORITY_P1:
-		return "p1"
+		return 1
 	case pb.Priority_PRIORITY_P2:
-		return "p2"
+		return 2
 	case pb.Priority_PRIORITY_P3:
-		return "p3"
+		return 3
 	case pb.Priority_PRIORITY_P4:
-		return "p4"
+		return 4
 	default:
-		return ""
+		return 2 // default to medium priority
 	}
 }
 

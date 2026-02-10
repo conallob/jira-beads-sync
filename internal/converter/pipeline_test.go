@@ -67,7 +67,7 @@ func TestPipelineConvertFile(t *testing.T) {
 		`"id":"proj-2"`,
 		`"title":"Create login API endpoint"`,
 		`"status":"open"`,
-		`"priority":"p1"`,
+		`"priority":1`,
 		`"epic":"proj-1"`,
 		`"dependsOn":["proj-4"]`,
 		`"jiraKey":"PROJ-2"`,

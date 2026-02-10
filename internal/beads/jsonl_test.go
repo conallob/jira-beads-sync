@@ -3,6 +3,7 @@ package beads
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -158,8 +159,8 @@ func TestIssueToJSON(t *testing.T) {
 	if jsonIssue.Status != "in_progress" {
 		t.Errorf("Expected status 'in_progress', got '%s'", jsonIssue.Status)
 	}
-	if jsonIssue.Priority != "p0" {
-		t.Errorf("Expected priority 'p0', got '%s'", jsonIssue.Priority)
+	if jsonIssue.Priority != 0 {
+		t.Errorf("Expected priority 0, got %d", jsonIssue.Priority)
 	}
 	if jsonIssue.Epic != "epic-1" {
 		t.Errorf("Expected epic 'epic-1', got '%s'", jsonIssue.Epic)
@@ -209,20 +210,20 @@ func TestPriorityConversion(t *testing.T) {
 
 	tests := []struct {
 		priority pb.Priority
-		want     string
+		want     int
 	}{
-		{pb.Priority_PRIORITY_P0, "p0"},
-		{pb.Priority_PRIORITY_P1, "p1"},
-		{pb.Priority_PRIORITY_P2, "p2"},
-		{pb.Priority_PRIORITY_P3, "p3"},
-		{pb.Priority_PRIORITY_P4, "p4"},
+		{pb.Priority_PRIORITY_P0, 0},
+		{pb.Priority_PRIORITY_P1, 1},
+		{pb.Priority_PRIORITY_P2, 2},
+		{pb.Priority_PRIORITY_P3, 3},
+		{pb.Priority_PRIORITY_P4, 4},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.want, func(t *testing.T) {
-			got := renderer.priorityToString(tt.priority)
+		t.Run(fmt.Sprintf("P%d", tt.want), func(t *testing.T) {
+			got := renderer.priorityToInt(tt.priority)
 			if got != tt.want {
-				t.Errorf("priorityToString(%v) = %s, want %s", tt.priority, got, tt.want)
+				t.Errorf("priorityToInt(%v) = %d, want %d", tt.priority, got, tt.want)
 			}
 		})
 	}
