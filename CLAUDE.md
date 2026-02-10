@@ -196,8 +196,39 @@ Note: Convert mode does not support syncing back to Jira
 
 The tool uses Jira REST API v2 for bidirectional synchronization:
 
+### Authentication Methods
+
+The tool supports two authentication methods:
+
+1. **Basic Auth** (default) - For Jira Cloud with .atlassian.net domains
+   - Username: Your email address (e.g., user@company.com)
+   - API Token: Generated from https://id.atlassian.com/manage/api-tokens
+
+2. **Bearer Token** - For Jira Cloud with custom domains or Jira Server/Data Center
+   - Bearer Token: Personal Access Token (PAT) from your Jira instance
+   - Username: Optional (for display purposes only)
+
+### Configuration
+
+Authentication can be configured via:
+- **Interactive setup**: Run `jira-beads-sync configure`
+- **Config file**: `~/.config/jira-beads-sync/config.yml`
+- **Environment variables**:
+  - `JIRA_BASE_URL`: Your Jira instance URL
+  - `JIRA_USERNAME`: Username or email
+  - `JIRA_API_TOKEN`: API token or bearer token
+  - `JIRA_AUTH_METHOD`: `basic` or `bearer` (defaults to `basic`)
+
+Example config file:
+```yaml
+jira:
+  base_url: https://jira.example.com
+  username: user@company.com
+  api_token: your-token-here
+  auth_method: bearer  # or "basic"
+```
+
 ### Fetching from Jira (Jira → Beads)
-- **Authentication**: Basic Auth with username and API token
 - **Configuration**: Supports config file, environment variables, or interactive setup
 - **Recursive Fetching**: Walks dependency graph including:
   - Subtasks (via `fields.subtasks`)
@@ -213,7 +244,7 @@ The tool uses Jira REST API v2 for bidirectional synchronization:
 
 Key files:
 - `internal/jira/client.go`: Jira API client with recursive dependency walking and update operations
-- `internal/config/config.go`: Configuration management
+- `internal/config/config.go`: Configuration management with support for both auth methods
 
 ## Claude Code Plugin
 

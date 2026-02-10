@@ -17,17 +17,37 @@ type Client struct {
 	httpClient *http.Client
 	username   string
 	apiToken   string
+	authMethod string // "basic" or "bearer"
 	adapter    *Adapter
 }
 
 // NewClient creates a new Jira API client
-func NewClient(baseURL, username, apiToken string) *Client {
+// authMethod should be "basic" or "bearer"
+// For basic auth: username is email/username, apiToken is API token
+// For bearer auth: apiToken is the bearer token, username is optional
+func NewClient(baseURL, username, apiToken, authMethod string) *Client {
+	// Default to basic auth if not specified
+	if authMethod == "" {
+		authMethod = "basic"
+	}
+	
 	return &Client{
 		baseURL:    strings.TrimSuffix(baseURL, "/"),
 		httpClient: &http.Client{},
 		username:   username,
 		apiToken:   apiToken,
+		authMethod: authMethod,
 		adapter:    NewAdapter(),
+	}
+}
+
+// setAuthHeader sets the appropriate authentication header on the request
+func (c *Client) setAuthHeader(req *http.Request) {
+	if c.authMethod == "bearer" {
+		req.Header.Set("Authorization", "Bearer "+c.apiToken)
+	} else {
+		// Default to basic auth
+		req.SetBasicAuth(c.username, c.apiToken)
 	}
 }
 
@@ -40,7 +60,7 @@ func (c *Client) FetchIssue(issueKey string) (*pb.Issue, error) {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.SetBasicAuth(c.username, c.apiToken)
+	c.setAuthHeader(req)
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := c.httpClient.Do(req)
@@ -95,7 +115,7 @@ func (c *Client) GetCurrentUser() (*UserInfo, error) {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.SetBasicAuth(c.username, c.apiToken)
+	c.setAuthHeader(req)
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := c.httpClient.Do(req)
@@ -255,7 +275,7 @@ func (c *Client) SearchIssues(jql string) ([]string, error) {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.SetBasicAuth(c.username, c.apiToken)
+	c.setAuthHeader(req)
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := c.httpClient.Do(req)

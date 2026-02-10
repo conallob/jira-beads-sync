@@ -9,7 +9,7 @@ import (
 )
 
 func TestNewClient(t *testing.T) {
-	client := NewClient("https://jira.example.com", "user@example.com", "token123")
+	client := NewClient("https://jira.example.com", "user@example.com", "token123", "basic")
 
 	if client == nil {
 		t.Fatal("Expected client to be created, got nil")
@@ -37,7 +37,7 @@ func TestNewClient(t *testing.T) {
 }
 
 func TestNewClientTrimsTrailingSlash(t *testing.T) {
-	client := NewClient("https://jira.example.com/", "user@example.com", "token123")
+	client := NewClient("https://jira.example.com/", "user@example.com", "token123", "basic")
 
 	if client.baseURL != "https://jira.example.com" {
 		t.Errorf("Expected baseURL to trim trailing slash, got '%s'", client.baseURL)
@@ -100,7 +100,7 @@ func TestFetchIssue(t *testing.T) {
 	defer server.Close()
 
 	// Create client with test server URL
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	// Fetch the issue
 	issue, err := client.FetchIssue("PROJ-123")
@@ -131,7 +131,7 @@ func TestFetchIssueNotFound(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	_, err := client.FetchIssue("NOTFOUND-999")
 	if err == nil {
@@ -149,7 +149,7 @@ func TestFetchIssueUnauthorized(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "badtoken")
+	client := NewClient(server.URL, "user@example.com", "badtoken", "basic")
 
 	_, err := client.FetchIssue("PROJ-123")
 	if err == nil {
@@ -263,7 +263,7 @@ func TestFetchIssueWithDependencies(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	// Fetch issue with dependencies
 	export, err := client.FetchIssueWithDependencies("PROJ-123")
@@ -383,7 +383,7 @@ func TestFetchIssueWithDependenciesCircular(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	// Should handle circular dependency without infinite loop
 	export, err := client.FetchIssueWithDependencies("PROJ-1")
@@ -564,7 +564,7 @@ func TestFetchRecursiveSkipsEpicParents(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	export, err := client.FetchIssueWithDependencies("PROJ-123")
 	if err != nil {
@@ -653,7 +653,7 @@ func TestFetchRecursiveFetchesNonEpicParents(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	export, err := client.FetchIssueWithDependencies("PROJ-124")
 	if err != nil {
@@ -679,7 +679,7 @@ func TestFetchIssueInvalidJSON(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	_, err := client.FetchIssue("PROJ-123")
 	if err == nil {
@@ -750,7 +750,7 @@ func TestFetchIssueWithBothInwardAndOutwardLinks(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	export, err := client.FetchIssueWithDependencies("PROJ-100")
 	if err != nil {
@@ -832,7 +832,7 @@ func TestSearchIssues(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	issueKeys, err := client.SearchIssues("project = PROJ")
 	if err != nil {
@@ -869,7 +869,7 @@ func TestSearchIssuesWithPagination(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	issueKeys, err := client.SearchIssues("project = PROJ")
 	if err != nil {
@@ -905,7 +905,7 @@ func TestSearchIssuesByLabel(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	issueKeys, err := client.SearchIssuesByLabel("sprint-23")
 	if err != nil {
@@ -939,7 +939,7 @@ func TestSearchIssuesByLabelWithSpaces(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	issueKeys, err := client.SearchIssuesByLabel("my feature")
 	if err != nil {
@@ -974,7 +974,7 @@ func TestSearchIssuesByLabelWithQuotes(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	issueKeys, err := client.SearchIssuesByLabel(`fix "bug" here`)
 	if err != nil {
@@ -1020,7 +1020,7 @@ func TestFetchIssuesByLabel(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	export, err := client.FetchIssuesByLabel("sprint-23")
 	if err != nil {
@@ -1107,7 +1107,7 @@ func TestFetchIssuesByLabelWithDependencies(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	export, err := client.FetchIssuesByLabel("sprint-23")
 	if err != nil {
@@ -1143,7 +1143,7 @@ func TestFetchIssuesByLabelNoResults(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	_, err := client.FetchIssuesByLabel("nonexistent-label")
 	if err == nil {
@@ -1165,7 +1165,7 @@ func TestSearchIssuesUnauthorized(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "badtoken")
+	client := NewClient(server.URL, "user@example.com", "badtoken", "basic")
 
 	_, err := client.SearchIssues("project = PROJ")
 	if err == nil {
@@ -1182,7 +1182,7 @@ func TestSearchIssuesInvalidJSON(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	_, err := client.SearchIssues("project = PROJ")
 	if err == nil {
@@ -1230,7 +1230,7 @@ func TestGetCurrentUser(t *testing.T) {
 	defer server.Close()
 
 	// Create client with test server URL
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	// Get current user
 	userInfo, err := client.GetCurrentUser()
@@ -1269,7 +1269,7 @@ func TestGetCurrentUserUnauthorized(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "badtoken")
+	client := NewClient(server.URL, "user@example.com", "badtoken", "basic")
 
 	_, err := client.GetCurrentUser()
 	if err == nil {
@@ -1292,7 +1292,7 @@ func TestGetCurrentUserInvalidJSON(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	_, err := client.GetCurrentUser()
 	if err == nil {
@@ -1310,7 +1310,7 @@ func TestGetCurrentUserServerError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	_, err := client.GetCurrentUser()
 	if err == nil {

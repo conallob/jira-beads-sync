@@ -46,7 +46,7 @@ func TestConfigValidate(t *testing.T) {
 				},
 			},
 			expectError: true,
-			errorMsg:    "jira username is required",
+			errorMsg:    "jira username is required for basic auth",
 		},
 		{
 			name: "missing API token",
