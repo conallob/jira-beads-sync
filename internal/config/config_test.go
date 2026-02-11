@@ -46,7 +46,7 @@ func TestConfigValidate(t *testing.T) {
 				},
 			},
 			expectError: true,
-			errorMsg:    "jira username is required",
+			errorMsg:    "jira username is required for basic auth",
 		},
 		{
 			name: "missing API token",
@@ -70,6 +70,56 @@ func TestConfigValidate(t *testing.T) {
 				},
 			},
 			expectError: true,
+		},
+		{
+			name: "valid bearer auth config",
+			config: &Config{
+				Jira: JiraConfig{
+					BaseURL:    "https://jira.example.com",
+					AuthMethod: "bearer",
+					APIToken:   "my-bearer-token-123",
+					Username:   "", // Username is optional for bearer auth
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "bearer auth with username (optional)",
+			config: &Config{
+				Jira: JiraConfig{
+					BaseURL:    "https://jira.example.com",
+					AuthMethod: "bearer",
+					APIToken:   "my-bearer-token-123",
+					Username:   "display-name",
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "bearer auth missing token",
+			config: &Config{
+				Jira: JiraConfig{
+					BaseURL:    "https://jira.example.com",
+					AuthMethod: "bearer",
+					APIToken:   "",
+					Username:   "user@example.com",
+				},
+			},
+			expectError: true,
+			errorMsg:    "jira bearer token is required",
+		},
+		{
+			name: "invalid auth method",
+			config: &Config{
+				Jira: JiraConfig{
+					BaseURL:    "https://jira.example.com",
+					AuthMethod: "invalid",
+					APIToken:   "token123",
+					Username:   "user@example.com",
+				},
+			},
+			expectError: true,
+			errorMsg:    "jira auth method must be 'basic' or 'bearer', got: invalid",
 		},
 	}
 

@@ -141,7 +141,7 @@ func runQuickstart(urlOrKey string) error {
 	fmt.Println()
 
 	// Create Jira client
-	client := jira.NewClient(baseURL, cfg.Jira.Username, cfg.Jira.APIToken)
+	client := jira.NewClient(baseURL, cfg.Jira.Username, cfg.Jira.APIToken, cfg.Jira.AuthMethod)
 
 	// Fetch issue and dependencies
 	fmt.Printf("Fetching %s and its dependencies...\n", issueKey)
@@ -216,7 +216,7 @@ func runWhoami() error {
 	fmt.Println()
 
 	// Create Jira client
-	client := jira.NewClient(cfg.Jira.BaseURL, cfg.Jira.Username, cfg.Jira.APIToken)
+	client := jira.NewClient(cfg.Jira.BaseURL, cfg.Jira.Username, cfg.Jira.APIToken, cfg.Jira.AuthMethod)
 
 	// Test authentication by fetching current user
 	fmt.Println("Testing Jira connection...")
@@ -287,7 +287,7 @@ func runFetchByLabel(label string) error {
 	}
 
 	// Create Jira client
-	client := jira.NewClient(cfg.Jira.BaseURL, cfg.Jira.Username, cfg.Jira.APIToken)
+	client := jira.NewClient(cfg.Jira.BaseURL, cfg.Jira.Username, cfg.Jira.APIToken, cfg.Jira.AuthMethod)
 
 	// Fetch issues by label
 	jiraExport, err := client.FetchIssuesByLabel(label)
