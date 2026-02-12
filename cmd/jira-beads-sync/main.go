@@ -364,7 +364,7 @@ func runFetchByJQL(jqlQuery string) error {
 	}
 
 	// Create Jira client
-	client := jira.NewClient(cfg.Jira.BaseURL, cfg.Jira.Username, cfg.Jira.APIToken)
+	client := jira.NewClient(cfg.Jira.BaseURL, cfg.Jira.Username, cfg.Jira.APIToken, cfg.Jira.AuthMethod)
 
 	// Fetch issues by JQL
 	jiraExport, err := client.FetchIssuesByJQL(jqlQuery)
