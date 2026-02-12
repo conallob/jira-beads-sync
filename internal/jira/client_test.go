@@ -1470,7 +1470,7 @@ func TestFetchIssuesByJQL(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	export, err := client.FetchIssuesByJQL("project = PROJ AND status = Open")
 	if err != nil {
@@ -1569,7 +1569,7 @@ func TestFetchIssuesByJQLWithDependencies(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	export, err := client.FetchIssuesByJQL("assignee = currentUser()")
 	if err != nil {
@@ -1605,7 +1605,7 @@ func TestFetchIssuesByJQLNoResults(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	_, err := client.FetchIssuesByJQL("project = NONEXISTENT")
 	if err == nil {
@@ -1652,7 +1652,7 @@ func TestFetchIssuesByJQLWithComplexQuery(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	// Test with complex JQL query
 	jql := `project = MYPROJ AND assignee = currentUser() AND status IN ("READY TO START", "In Progress")`
@@ -1676,7 +1676,7 @@ func TestFetchIssuesByJQLUnauthorized(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "badtoken")
+	client := NewClient(server.URL, "user@example.com", "badtoken", "basic")
 
 	_, err := client.FetchIssuesByJQL("project = PROJ")
 	if err == nil {
@@ -1694,7 +1694,7 @@ func TestFetchIssuesByJQLServerError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	_, err := client.FetchIssuesByJQL("project = PROJ")
 	if err == nil {
@@ -1712,7 +1712,7 @@ func TestFetchIssuesByJQLInvalidJSON(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	_, err := client.FetchIssuesByJQL("project = PROJ")
 	if err == nil {
@@ -1752,7 +1752,7 @@ func TestFetchIssuesByJQLWithSpecialCharacters(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	// Test with special characters that need URL encoding
 	jql := `summary ~ "test \"quoted\" value" AND labels = 'sprint-23'`
@@ -1788,7 +1788,7 @@ func TestFetchIssuesByJQLWithEmptyQuery(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	// Empty JQL should still make the request
 	_, err := client.FetchIssuesByJQL("")
@@ -1830,7 +1830,7 @@ func TestFetchIssuesByJQLPaginationWarning(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	// Should return partial results with warning
 	export, err := client.FetchIssuesByJQL("project = PROJ")
@@ -1940,7 +1940,7 @@ func TestFetchIssuesByJQLWithCircularDependencies(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "user@example.com", "token123")
+	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
 	export, err := client.FetchIssuesByJQL("project = PROJ")
 	if err != nil {
