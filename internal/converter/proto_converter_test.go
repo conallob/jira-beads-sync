@@ -78,6 +78,69 @@ func TestProtoMapStatus(t *testing.T) {
 			jiraStatus: nil,
 			wantStatus: beadspb.Status_STATUS_OPEN,
 		},
+		{
+			name: "nil status category",
+			jiraStatus: &jirapb.Status{
+				Name:           "Some Status",
+				StatusCategory: nil,
+			},
+			wantStatus: beadspb.Status_STATUS_OPEN,
+		},
+		{
+			name: "in progress by name",
+			jiraStatus: &jirapb.Status{
+				Name: "In Progress",
+				StatusCategory: &jirapb.StatusCategory{
+					Key:  "unknown",
+					Name: "Unknown",
+				},
+			},
+			wantStatus: beadspb.Status_STATUS_IN_PROGRESS,
+		},
+		{
+			name: "doing by name",
+			jiraStatus: &jirapb.Status{
+				Name: "Doing",
+				StatusCategory: &jirapb.StatusCategory{
+					Key:  "unknown",
+					Name: "Unknown",
+				},
+			},
+			wantStatus: beadspb.Status_STATUS_IN_PROGRESS,
+		},
+		{
+			name: "done by name in default branch",
+			jiraStatus: &jirapb.Status{
+				Name: "Done Reviewing",
+				StatusCategory: &jirapb.StatusCategory{
+					Key:  "unknown",
+					Name: "Unknown",
+				},
+			},
+			wantStatus: beadspb.Status_STATUS_CLOSED,
+		},
+		{
+			name: "closed by name",
+			jiraStatus: &jirapb.Status{
+				Name: "Closed",
+				StatusCategory: &jirapb.StatusCategory{
+					Key:  "unknown",
+					Name: "Unknown",
+				},
+			},
+			wantStatus: beadspb.Status_STATUS_CLOSED,
+		},
+		{
+			name: "unknown status falls back to open",
+			jiraStatus: &jirapb.Status{
+				Name: "Weird Custom Status",
+				StatusCategory: &jirapb.StatusCategory{
+					Key:  "unknown",
+					Name: "Unknown",
+				},
+			},
+			wantStatus: beadspb.Status_STATUS_OPEN,
+		},
 	}
 
 	for _, tt := range tests {
