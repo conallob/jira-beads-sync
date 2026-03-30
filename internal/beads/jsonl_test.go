@@ -279,3 +279,205 @@ func TestJSONLFormat(t *testing.T) {
 		}
 	}
 }
+
+func TestStatusConversionDefault(t *testing.T) {
+	renderer := NewJSONLRenderer("/tmp/test")
+	// Any value outside the known enum cases falls through to "open"
+	got := renderer.statusToString(pb.Status(999))
+	if got != "open" {
+		t.Errorf("statusToString(unknown) = %q, want %q", got, "open")
+	}
+}
+
+func TestPriorityConversionDefault(t *testing.T) {
+	renderer := NewJSONLRenderer("/tmp/test")
+	// Any value outside the known enum cases defaults to medium (2)
+	got := renderer.priorityToInt(pb.Priority(999))
+	if got != 2 {
+		t.Errorf("priorityToInt(unknown) = %d, want 2", got)
+	}
+}
+
+func TestTimestampToStringNil(t *testing.T) {
+	renderer := NewJSONLRenderer("/tmp/test")
+	got := renderer.timestampToString(nil)
+	if got != "" {
+		t.Errorf("timestampToString(nil) = %q, want empty string", got)
+	}
+}
+
+func TestEpicToJSONWithMetadata(t *testing.T) {
+	renderer := NewJSONLRenderer("/tmp/test")
+
+	epic := &pb.Epic{
+		Id:          "epic-42",
+		Name:        "My Epic",
+		Description: "Epic description",
+		Status:      pb.Status_STATUS_IN_PROGRESS,
+		Metadata: &pb.Metadata{
+			JiraKey:       "PROJ-42",
+			JiraId:        "10042",
+			JiraIssueType: "Epic",
+		},
+	}
+
+	jsonEpic := renderer.epicToJSON(epic)
+
+	if jsonEpic.ID != "epic-42" {
+		t.Errorf("Expected ID 'epic-42', got '%s'", jsonEpic.ID)
+	}
+	if jsonEpic.Status != "in_progress" {
+		t.Errorf("Expected status 'in_progress', got '%s'", jsonEpic.Status)
+	}
+	if jsonEpic.Metadata == nil {
+		t.Fatal("Expected metadata to be non-nil")
+	}
+	if jsonEpic.Metadata["jiraKey"] != "PROJ-42" {
+		t.Errorf("Expected jiraKey 'PROJ-42', got '%s'", jsonEpic.Metadata["jiraKey"])
+	}
+	if jsonEpic.Metadata["jiraId"] != "10042" {
+		t.Errorf("Expected jiraId '10042', got '%s'", jsonEpic.Metadata["jiraId"])
+	}
+	if jsonEpic.Metadata["jiraIssueType"] != "Epic" {
+		t.Errorf("Expected jiraIssueType 'Epic', got '%s'", jsonEpic.Metadata["jiraIssueType"])
+	}
+}
+
+func TestAddRepositoryAnnotation(t *testing.T) {
+	tmpDir := t.TempDir()
+	renderer := NewJSONLRenderer(tmpDir)
+
+	// First write some issues to a file
+	export := &pb.Export{
+		Issues: []*pb.Issue{
+			{Id: "proj-100", Title: "Issue 100", Status: pb.Status_STATUS_OPEN},
+			{Id: "proj-101", Title: "Issue 101", Status: pb.Status_STATUS_OPEN},
+		},
+	}
+	if err := renderer.RenderExport(export); err != nil {
+		t.Fatalf("RenderExport failed: %v", err)
+	}
+
+	// Annotate one issue
+	if err := renderer.AddRepositoryAnnotation("proj-100", "https://github.com/org/repo"); err != nil {
+		t.Fatalf("AddRepositoryAnnotation failed: %v", err)
+	}
+
+	// Read back and verify
+	issuesFile := filepath.Join(tmpDir, ".beads", "issues.jsonl")
+	data, err := os.ReadFile(issuesFile)
+	if err != nil {
+		t.Fatalf("Failed to read issues.jsonl: %v", err)
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("Expected 2 lines, got %d", len(lines))
+	}
+
+	var annotated BeadsIssue
+	if err := json.Unmarshal([]byte(lines[0]), &annotated); err != nil {
+		t.Fatalf("Failed to parse first issue: %v", err)
+	}
+	if annotated.Metadata == nil || annotated.Metadata["repositories"] != "https://github.com/org/repo" {
+		t.Errorf("Expected repository annotation, got metadata: %v", annotated.Metadata)
+	}
+
+	// Second issue should be unchanged
+	var unannotated BeadsIssue
+	if err := json.Unmarshal([]byte(lines[1]), &unannotated); err != nil {
+		t.Fatalf("Failed to parse second issue: %v", err)
+	}
+	if unannotated.Metadata != nil && unannotated.Metadata["repositories"] != "" {
+		t.Errorf("Expected second issue to have no repository annotation, got: %v", unannotated.Metadata)
+	}
+}
+
+func TestAddRepositoryAnnotationDuplicate(t *testing.T) {
+	tmpDir := t.TempDir()
+	renderer := NewJSONLRenderer(tmpDir)
+
+	export := &pb.Export{
+		Issues: []*pb.Issue{
+			{Id: "proj-200", Title: "Issue 200", Status: pb.Status_STATUS_OPEN},
+		},
+	}
+	if err := renderer.RenderExport(export); err != nil {
+		t.Fatalf("RenderExport failed: %v", err)
+	}
+
+	repo := "https://github.com/org/repo"
+	if err := renderer.AddRepositoryAnnotation("proj-200", repo); err != nil {
+		t.Fatalf("First annotation failed: %v", err)
+	}
+
+	// Adding the same repo again should return an error
+	err := renderer.AddRepositoryAnnotation("proj-200", repo)
+	if err == nil {
+		t.Error("Expected error for duplicate repository annotation, got nil")
+	}
+}
+
+func TestAddRepositoryAnnotationMultiple(t *testing.T) {
+	tmpDir := t.TempDir()
+	renderer := NewJSONLRenderer(tmpDir)
+
+	export := &pb.Export{
+		Issues: []*pb.Issue{
+			{Id: "proj-300", Title: "Issue 300", Status: pb.Status_STATUS_OPEN},
+		},
+	}
+	if err := renderer.RenderExport(export); err != nil {
+		t.Fatalf("RenderExport failed: %v", err)
+	}
+
+	if err := renderer.AddRepositoryAnnotation("proj-300", "https://github.com/org/repo1"); err != nil {
+		t.Fatalf("First annotation failed: %v", err)
+	}
+	if err := renderer.AddRepositoryAnnotation("proj-300", "https://github.com/org/repo2"); err != nil {
+		t.Fatalf("Second annotation failed: %v", err)
+	}
+
+	issuesFile := filepath.Join(tmpDir, ".beads", "issues.jsonl")
+	data, err := os.ReadFile(issuesFile)
+	if err != nil {
+		t.Fatalf("Failed to read issues.jsonl: %v", err)
+	}
+
+	var issue BeadsIssue
+	if err := json.Unmarshal([]byte(strings.TrimSpace(string(data))), &issue); err != nil {
+		t.Fatalf("Failed to parse issue: %v", err)
+	}
+
+	repos := issue.Metadata["repositories"]
+	if repos != "https://github.com/org/repo1,https://github.com/org/repo2" {
+		t.Errorf("Expected both repos, got: %s", repos)
+	}
+}
+
+func TestAddRepositoryAnnotationNotFound(t *testing.T) {
+	tmpDir := t.TempDir()
+	renderer := NewJSONLRenderer(tmpDir)
+
+	export := &pb.Export{
+		Issues: []*pb.Issue{
+			{Id: "proj-400", Title: "Issue 400", Status: pb.Status_STATUS_OPEN},
+		},
+	}
+	if err := renderer.RenderExport(export); err != nil {
+		t.Fatalf("RenderExport failed: %v", err)
+	}
+
+	err := renderer.AddRepositoryAnnotation("does-not-exist", "https://github.com/org/repo")
+	if err == nil {
+		t.Error("Expected error for non-existent issue, got nil")
+	}
+}
+
+func TestAddRepositoryAnnotationFileNotFound(t *testing.T) {
+	renderer := NewJSONLRenderer("/nonexistent/dir")
+	err := renderer.AddRepositoryAnnotation("proj-1", "https://github.com/org/repo")
+	if err == nil {
+		t.Error("Expected error when issues file doesn't exist, got nil")
+	}
+}
