@@ -57,6 +57,10 @@ jobs:
       if: matrix.go-version == '1.25.5'
       run: go test -v -race -coverprofile=coverage.out ./...
 
+    - name: Remove generated code from coverage
+      if: matrix.go-version == '1.25.5'
+      run: grep -v "^github.com/conallob/jira-beads-sync/gen/" coverage.out > coverage.filtered.out && mv coverage.filtered.out coverage.out
+
     - name: Run tests without coverage
       if: matrix.go-version != '1.25.5'
       run: go test -v -race ./...
