@@ -264,60 +264,69 @@ func (c *Client) SearchIssuesByLabel(label string) ([]string, error) {
 	return c.SearchIssues(jql)
 }
 
-// SearchIssues performs a JQL search and returns issue keys
+// SearchIssues performs a JQL search and returns issue keys.
+// Uses Jira REST API v3 (/rest/api/3/search/jql) as required by Jira Cloud.
+// Automatically paginates to retrieve all matching issues.
 func (c *Client) SearchIssues(jql string) ([]string, error) {
-	// URL encode the JQL query
+	const pageSize = 100
 	encodedJQL := url.QueryEscape(jql)
-	apiURL := fmt.Sprintf("%s/rest/api/2/search?jql=%s&fields=key&maxResults=1000", c.baseURL, encodedJQL)
+	issueKeys := make([]string, 0)
+	startAt := 0
 
-	req, err := http.NewRequest("GET", apiURL, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
+	for {
+		apiURL := fmt.Sprintf("%s/rest/api/3/search/jql?jql=%s&fields=key&maxResults=%d&startAt=%d",
+			c.baseURL, encodedJQL, pageSize, startAt)
 
-	c.setAuthHeader(req)
-	req.Header.Set("Accept", "application/json")
+		req, err := http.NewRequest("GET", apiURL, nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %w", err)
+		}
 
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to search issues: %w", err)
-	}
-	defer func() {
+		c.setAuthHeader(req)
+		req.Header.Set("Accept", "application/json")
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to search issues: %w", err)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			if cerr := resp.Body.Close(); cerr != nil {
+				return nil, cerr
+			}
+			return nil, fmt.Errorf("jira API returned status %d: %s", resp.StatusCode, string(body))
+		}
+
+		body, err := io.ReadAll(resp.Body)
 		if cerr := resp.Body.Close(); cerr != nil && err == nil {
 			err = cerr
 		}
-	}()
+		if err != nil {
+			return nil, fmt.Errorf("failed to read response: %w", err)
+		}
 
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("jira API returned status %d: %s", resp.StatusCode, string(body))
-	}
+		var searchResult struct {
+			Issues []struct {
+				Key string `json:"key"`
+			} `json:"issues"`
+			Total  int  `json:"total"`
+			IsLast bool `json:"isLast"`
+		}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
+		if err := json.Unmarshal(body, &searchResult); err != nil {
+			return nil, fmt.Errorf("failed to parse search results: %w", err)
+		}
 
-	// Parse search results
-	var searchResult struct {
-		Issues []struct {
-			Key string `json:"key"`
-		} `json:"issues"`
-		Total int `json:"total"`
-	}
+		for _, issue := range searchResult.Issues {
+			issueKeys = append(issueKeys, issue.Key)
+		}
 
-	if err := json.Unmarshal(body, &searchResult); err != nil {
-		return nil, fmt.Errorf("failed to parse search results: %w", err)
-	}
-
-	// Extract issue keys
-	issueKeys := make([]string, 0, len(searchResult.Issues))
-	for _, issue := range searchResult.Issues {
-		issueKeys = append(issueKeys, issue.Key)
-	}
-
-	if len(issueKeys) < searchResult.Total {
-		fmt.Printf("⚠ Warning: Retrieved %d of %d total issues (pagination limit)\n", len(issueKeys), searchResult.Total)
+		// Stop if we've retrieved all issues or the server signals last page
+		if searchResult.IsLast || len(searchResult.Issues) == 0 || len(issueKeys) >= searchResult.Total {
+			break
+		}
+		startAt += len(searchResult.Issues)
 	}
 
 	return issueKeys, nil
