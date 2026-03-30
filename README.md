@@ -24,6 +24,7 @@ Perfect for developers who want to:
 🎯 **Use Cases:**
 - **CLI User?** → [CLI Guide](docs/CLI_GUIDE.md) - Complete command reference
 - **Claude Code User?** → [Plugin Guide](docs/PLUGIN_GUIDE.md) - Natural language workflows
+- **Opencode User?** → [Opencode Guide](docs/OPENCODE_GUIDE.md) - Opencode integration
 - **Need Examples?** → [Real-World Examples](docs/EXAMPLES.md) - Practical scenarios
 
 👩‍💻 **For Developers:**
@@ -135,9 +136,13 @@ jira-beads-sync sync
 
 **📖 Detailed Usage:** See [CLI Guide](docs/CLI_GUIDE.md) for all commands and options.
 
-## Using with Claude Code
+## Using with AI Coding Tools
 
-Enable natural language issue management:
+jira-beads-sync is a standard CLI binary that works with any AI coding assistant. Install it and configure Jira credentials once, then ask your AI tool to run commands on your behalf.
+
+### Claude Code
+
+Enable the built-in plugin for natural language issue management:
 
 ```bash
 claude --plugin-dir /path/to/jira-beads-sync
@@ -153,6 +158,30 @@ You: Sync changes back to Jira
 ```
 
 **📖 Plugin Guide:** See [Plugin Guide](docs/PLUGIN_GUIDE.md) for complete plugin documentation.
+
+### Opencode
+
+Add project instructions so Opencode knows how to invoke the CLI, then use natural language:
+
+```
+You: Import PROJ-123 from Jira
+You: Fetch all issues for sprint-47
+You: Sync my changes back to Jira
+```
+
+**📖 Opencode Guide:** See [Opencode Guide](docs/OPENCODE_GUIDE.md) for setup and workflow examples.
+
+### Other AI Tools
+
+Any AI coding tool that can run shell commands can use jira-beads-sync. Add these commands to your project's instructions file:
+
+```
+Import a Jira issue:   jira-beads-sync quickstart <JIRA-KEY>
+Fetch by label:        jira-beads-sync fetch-by-label <label>
+Fetch by JQL:          jira-beads-sync fetch-jql '<jql>'
+List issues:           bd list
+Sync back to Jira:     jira-beads-sync sync
+```
 
 ## How It Works
 

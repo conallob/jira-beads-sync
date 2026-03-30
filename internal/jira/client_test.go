@@ -910,8 +910,8 @@ func createMinimalIssue(key, summary string) map[string]interface{} {
 func TestSearchIssues(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Verify the request path
-		if r.URL.Path != "/rest/api/2/search" {
-			t.Errorf("Expected path '/rest/api/2/search', got '%s'", r.URL.Path)
+		if r.URL.Path != "/rest/api/3/search/jql" {
+			t.Errorf("Expected path '/rest/api/3/search/jql', got '%s'", r.URL.Path)
 		}
 
 		// Verify authentication
@@ -963,14 +963,33 @@ func TestSearchIssues(t *testing.T) {
 }
 
 func TestSearchIssuesWithPagination(t *testing.T) {
+	requestCount := 0
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Simulate pagination warning
-		response := map[string]interface{}{
-			"issues": []map[string]interface{}{
-				{"key": "PROJ-1"},
-				{"key": "PROJ-2"},
-			},
-			"total": 1500, // More than maxResults
+		requestCount++
+		startAt := r.URL.Query().Get("startAt")
+
+		var response map[string]interface{}
+		if startAt == "0" || startAt == "" {
+			// First page: 2 issues, not the last
+			response = map[string]interface{}{
+				"issues": []map[string]interface{}{
+					{"key": "PROJ-1"},
+					{"key": "PROJ-2"},
+				},
+				"total":  4,
+				"isLast": false,
+			}
+		} else {
+			// Second page: remaining 2 issues, last page
+			response = map[string]interface{}{
+				"issues": []map[string]interface{}{
+					{"key": "PROJ-3"},
+					{"key": "PROJ-4"},
+				},
+				"total":  4,
+				"isLast": true,
+			}
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -987,9 +1006,20 @@ func TestSearchIssuesWithPagination(t *testing.T) {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
 
-	// Should still return the issues, just with a warning
-	if len(issueKeys) != 2 {
-		t.Errorf("Expected 2 issue keys, got %d", len(issueKeys))
+	// Should have retrieved all 4 issues across 2 pages
+	if len(issueKeys) != 4 {
+		t.Errorf("Expected 4 issue keys, got %d", len(issueKeys))
+	}
+
+	if requestCount != 2 {
+		t.Errorf("Expected 2 requests (pagination), got %d", requestCount)
+	}
+
+	expectedKeys := []string{"PROJ-1", "PROJ-2", "PROJ-3", "PROJ-4"}
+	for i, key := range expectedKeys {
+		if issueKeys[i] != key {
+			t.Errorf("Expected key '%s' at index %d, got '%s'", key, i, issueKeys[i])
+		}
 	}
 }
 
@@ -1102,7 +1132,7 @@ func TestFetchIssuesByLabel(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/rest/api/2/search":
+		case "/rest/api/3/search/jql":
 			// Return search results
 			response := map[string]interface{}{
 				"issues": []map[string]interface{}{
@@ -1160,7 +1190,7 @@ func TestFetchIssuesByLabelWithDependencies(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/rest/api/2/search":
+		case "/rest/api/3/search/jql":
 			// Return search results
 			response := map[string]interface{}{
 				"issues": []map[string]interface{}{
@@ -1434,7 +1464,7 @@ func TestFetchIssuesByJQL(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/rest/api/2/search":
+		case "/rest/api/3/search/jql":
 			// Verify JQL query is passed correctly
 			jql := r.URL.Query().Get("jql")
 			if jql == "" {
@@ -1499,7 +1529,7 @@ func TestFetchIssuesByJQLWithDependencies(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/rest/api/2/search":
+		case "/rest/api/3/search/jql":
 			// Return search results
 			response := map[string]interface{}{
 				"issues": []map[string]interface{}{
@@ -1621,7 +1651,7 @@ func TestFetchIssuesByJQLNoResults(t *testing.T) {
 func TestFetchIssuesByJQLWithComplexQuery(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/rest/api/2/search":
+		case "/rest/api/3/search/jql":
 			// Verify complex JQL query is passed
 			jql := r.URL.Query().Get("jql")
 			if !strings.Contains(jql, "project") {
@@ -1725,7 +1755,7 @@ func TestFetchIssuesByJQLWithSpecialCharacters(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/rest/api/2/search":
+		case "/rest/api/3/search/jql":
 			// Capture the JQL query
 			capturedJQL = r.URL.Query().Get("jql")
 
@@ -1804,14 +1834,15 @@ func TestFetchIssuesByJQLWithEmptyQuery(t *testing.T) {
 func TestFetchIssuesByJQLPaginationWarning(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/rest/api/2/search":
-			// Return only 2 issues but indicate there are 1000 total
+		case "/rest/api/3/search/jql":
+			// Return 2 issues and signal last page
 			response := map[string]interface{}{
 				"issues": []map[string]interface{}{
 					{"key": "PROJ-100"},
 					{"key": "PROJ-101"},
 				},
-				"total": 1000,
+				"total":  2,
+				"isLast": true,
 			}
 
 			w.Header().Set("Content-Type", "application/json")
@@ -1832,14 +1863,13 @@ func TestFetchIssuesByJQLPaginationWarning(t *testing.T) {
 
 	client := NewClient(server.URL, "user@example.com", "token123", "basic")
 
-	// Should return partial results with warning
 	export, err := client.FetchIssuesByJQL("project = PROJ")
 	if err != nil {
 		t.Fatalf("Expected no error, got: %v", err)
 	}
 
 	if len(export.Issues) != 2 {
-		t.Errorf("Expected 2 issues (paginated), got %d", len(export.Issues))
+		t.Errorf("Expected 2 issues, got %d", len(export.Issues))
 	}
 }
 
@@ -1848,7 +1878,7 @@ func TestFetchIssuesByJQLWithCircularDependencies(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/rest/api/2/search":
+		case "/rest/api/3/search/jql":
 			response := map[string]interface{}{
 				"issues": []map[string]interface{}{
 					{"key": "PROJ-1"},
