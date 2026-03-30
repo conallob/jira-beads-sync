@@ -292,12 +292,16 @@ func (c *Client) SearchIssues(jql string) ([]string, error) {
 
 		if resp.StatusCode != http.StatusOK {
 			body, _ := io.ReadAll(resp.Body)
-			resp.Body.Close()
+			if cerr := resp.Body.Close(); cerr != nil {
+				return nil, cerr
+			}
 			return nil, fmt.Errorf("jira API returned status %d: %s", resp.StatusCode, string(body))
 		}
 
 		body, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		if cerr := resp.Body.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
 		if err != nil {
 			return nil, fmt.Errorf("failed to read response: %w", err)
 		}
