@@ -30,7 +30,7 @@ jobs:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Install protoc-gen-go
-      run: go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+      run: go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11
 
     - name: Verify protobuf generation
       run: |
@@ -108,7 +108,7 @@ jobs:
 
     - name: Install protoc-gen-go
       if: steps.filter.outputs.go == 'true' || github.event_name == 'push'
-      run: go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+      run: go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11
 
     - name: Generate protobuf files
       if: steps.filter.outputs.go == 'true' || github.event_name == 'push'
@@ -151,7 +151,7 @@ jobs:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Install protoc-gen-go
-      run: go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+      run: go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11
 
     - name: Generate protobuf files
       run: protoc --go_out=. --go_opt=module=github.com/conallob/jira-beads-sync --proto_path=proto proto/jira.proto proto/beads.proto
