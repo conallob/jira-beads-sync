@@ -23,7 +23,7 @@ Thank you for your interest in contributing! This document provides guidelines a
 2. **Install dependencies:**
    ```bash
    go mod download
-   go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+   go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11
    ```
 
 3. **Generate protobuf files:**
