@@ -49,7 +49,7 @@ jira-beads-sync handles:
 
 Before you start, you'll need:
 
-1. **Go 1.21 or later** (if installing from source)
+1. **Go 1.27 or later** (if installing from source)
 2. **Jira access**:
    - A Jira account with access to the projects you want to sync
    - An API token (we'll show you how to get one)

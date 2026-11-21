@@ -6,7 +6,7 @@ Thank you for your interest in contributing! This document provides guidelines a
 
 ### Prerequisites
 
-- Go 1.21 or later
+- Go 1.27 or later
 - Protocol Buffers compiler (`protoc`) version 33.2 (to ensure consistency with CI)
 - `protoc-gen-go` plugin
 - `golangci-lint` for code linting
@@ -134,7 +134,7 @@ docs: update installation instructions
 This project uses GitHub Actions for CI/CD:
 
 - **Test workflow** (`test.yml`): Runs on all pushes and PRs
-  - Tests on Go 1.21, 1.22, and 1.23
+  - Tests on Go 1.27
   - Runs linter and formatting checks
   - Verifies protobuf files are up to date
 
