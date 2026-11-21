@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: ['1.23.5', '1.24.5', '1.25.5']
+        go-version: ['1.27']
 
     steps:
     - name: Checkout code
@@ -54,19 +54,19 @@ jobs:
       run: go env -w GOTOOLCHAIN=go${{ matrix.go-version }}+auto
 
     - name: Run tests with coverage
-      if: matrix.go-version == '1.25.5'
+      if: matrix.go-version == '1.27'
       run: go test -v -race -coverprofile=coverage.out ./...
 
     - name: Remove generated code from coverage
-      if: matrix.go-version == '1.25.5'
+      if: matrix.go-version == '1.27'
       run: grep -v "^github.com/conallob/jira-beads-sync/gen/" coverage.out > coverage.filtered.out && mv coverage.filtered.out coverage.out
 
     - name: Run tests without coverage
-      if: matrix.go-version != '1.25.5'
+      if: matrix.go-version != '1.27'
       run: go test -v -race ./...
 
     - name: Upload coverage to Codecov
-      if: matrix.go-version == '1.25.5'
+      if: matrix.go-version == '1.27'
       uses: codecov/codecov-action@v7
       with:
         file: ./coverage.out
@@ -97,7 +97,7 @@ jobs:
       if: steps.filter.outputs.go == 'true' || github.event_name == 'push'
       uses: actions/setup-go@v6
       with:
-        go-version: '1.25.5'
+        go-version: '1.27'
 
     - name: Install protoc
       if: steps.filter.outputs.go == 'true' || github.event_name == 'push'
@@ -118,7 +118,7 @@ jobs:
       if: steps.filter.outputs.go == 'true' || github.event_name == 'push'
       uses: golangci/golangci-lint-action@v9
       with:
-        version: v2.6
+        version: latest
         args: --timeout=5m
         only-new-issues: true
 
@@ -142,7 +142,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v6
       with:
-        go-version: '1.25.5'
+        go-version: '1.27'
 
     - name: Install protoc
       uses: arduino/setup-protoc@v3
